@@ -1,3 +1,5 @@
+import {tradePrice} from './settlement-services.js';
+import {updateCompanions,companionHostility,companionAI} from './companions.js';
 import {initializeEcology,updateEcology} from './ecology.js';
 import {initializeEvents,updateEvents,eventActorAI,raidAI} from './world-events.js';
 import {initializeIndustry,industryAI,updateIndustry} from './industry.js';
@@ -177,6 +179,7 @@ export class World{
  hostile(a,b){if(a===b||b.hp<=0||a.hp<=0||['wizard','dummy'].includes(a.role)||['wizard','dummy'].includes(b.role))return false;if(!this.dungeonSpec&&(dist(a,this.respawn)<34*TILE||dist(b,this.respawn)<34*TILE))return false;if(b.captive&&a.faction===b.captor)return false;if(a===this.player)return false;if(a.rioter)return b.faction===a.prisonCity&&!b.rioter&&!b.cellId;if(a.fleeingPrisoner||b.fleeingPrisoner)return false;
   if(BANDITS.includes(a.role))return b===this.player||(!ANIMALS[b.role]&&b.faction!==a.faction&&b.faction!=='sanctuary');
   if(GUARDS.includes(a.role)){const legal=legalHostility(this,a,b);return legal===true||b.rioter&&b.prisonCity===a.faction||(!b.fleeingPrisoner&&BANDITS.includes(b.role))||(ANIMALS[b.role]?.aggressive&&dist(b,a.home)<800);}
+  const companionEnemy=companionHostility(this,a,b);if(companionEnemy!==null)return companionEnemy;
   if(a.role==='hunter')return !!ANIMALS[b.role]||BANDITS.includes(b.role);
   if(ANIMALS[a.role]&&a.aggressor===b.id)return true;
   if(ANIMALS[a.role]?.aggressive)return b===this.player||['deer','hare','fox','goat'].includes(b.role)||['hunter','forester'].includes(b.role);
@@ -201,7 +204,7 @@ export class World{
  loot(e,c){this.transfer(c.inventory,e.inventory);}
  butcher(c,e){if(!c.animal||c.butchered)return false;const a=ANIMALS[c.animal];c.inventory.meat=(c.inventory.meat||0)+a.meat;c.inventory.hide=(c.inventory.hide||0)+a.hide;c.butchered=true;this.log(e.name+' разделал тушу: '+a.meat+' мяса, '+a.hide+' шкур.',{at:e,personal:e===this.player});return true;}
  harvest(e,t,dt){if(t.wood<=0)return false;e.state='logging';e.workProgress=(e.workProgress||0)+dt;if(e.workProgress>=6){if(e.role==='forester'&&this.generatorVersion>=4){this.woodPiles.push({id:++this.id,name:'Сложенные брёвна',x:t.x,y:t.y,city:e.faction,worker:e.id,inventory:{log:t.wood}});}else e.inventory.log=(e.inventory.log||0)+t.wood;this.log(e.name+' срубил дерево и '+(e.role==='forester'&&this.generatorVersion>=4?'сложил на земле ':'получил ')+t.wood+' бревна.',{at:e,personal:e===this.player});t.wood=0;this.choppedTrees.add(t.id);e.workProgress=0;return true;}return false;}
- trade(e,key,buy=true){const rules=e.noTrade?null:TRADE[e.role],p=this.player;if(!rules||!(buy?rules.sells:rules.buys).includes(key))return {ok:false,message:'Этот мастер не торгует таким товаром.'};const from=buy?e:p,to=buy?p:e,price=buy?ITEMS[key].price:Math.max(1,Math.floor(ITEMS[key].price*.6));if(!(from.inventory[key]>0))return {ok:false,message:'Товар закончился.'};if((to.inventory.gold||0)<price)return {ok:false,message:'Недостаточно золота у покупателя.'};from.inventory[key]--;to.inventory[key]=(to.inventory[key]||0)+1;to.inventory.gold-=price;from.inventory.gold=(from.inventory.gold||0)+price;return {ok:true};}
+ trade(e,key,buy=true){const rules=e.noTrade?null:TRADE[e.role],p=this.player;if(!rules||!(buy?rules.sells:rules.buys).includes(key))return {ok:false,message:'Этот мастер не торгует таким товаром.'};const from=buy?e:p,to=buy?p:e,price=tradePrice(this,e,key,buy);if(!(from.inventory[key]>0))return {ok:false,message:'Товар закончился.'};if((to.inventory.gold||0)<price)return {ok:false,message:'Недостаточно золота у покупателя.'};from.inventory[key]--;to.inventory[key]=(to.inventory[key]||0)+1;to.inventory.gold-=price;from.inventory.gold=(from.inventory.gold||0)+price;return {ok:true};}
  acceptQuest(offer){if(this.quests.some(q=>q.id===offer.id))return 'Это поручение уже записано в журнале.';if(this.quests.filter(q=>q.status==='active').length>=8)return 'Сначала завершите одно из восьми активных поручений.';if(offer.type==='escort'&&!offer.destination)return 'Караван ещё не выбрал маршрут.';normalizeCrafts(this.player);const q={...offer,craftedBaseline:this.player.crafted[offer.item]||0,status:'active',started:this.elapsed,baseline:offer.role==='bandits'?this.kills:(this.killCounts[offer.role]||0)};if(q.type==='courier')this.player.inventory.letter=(this.player.inventory.letter||0)+1;this.quests.push(q);this.log('Получено поручение: '+q.title);return 'Поручение принято. '+this.questText(q);}
  questProgress(q){if(CONTRACT_TYPES.has(q.type))return contractProgress(this,q);switch(q.type){case 'clearDungeon':return this.clearedDungeons.includes(q.dungeon)?1:0;case 'collect':return Math.min(q.count,this.player.inventory[q.item]||0);case 'kill':return Math.min(q.count,(q.role==='bandits'?this.kills:this.killCounts[q.role]||0)-q.baseline);case 'visit':return this.visited.includes(q.place)?1:0;case 'courier':return q.delivered?1:0;case 'escort':return q.arrived?1:0;default:return 0;}}
  heraldNews(city){return heraldNews(this,city);}
@@ -212,7 +215,7 @@ export class World{
   return messages.join('\n')||'Подходящих выполненных поручений пока нет.';
  }
  update(dt){if(this.dungeonSpec)revealDungeon(this);this.elapsed+=dt;this.time+=dt*.65;const p=this.player;p.cooldown=Math.max(0,p.cooldown-dt);p.attack=Math.max(0,p.attack-dt);p.stamina=Math.min(p.maxStamina||MAX_STAMINA,p.stamina+dt*(p.swimming?3:10));tickCombat(this,p,dt);guardWarnings(this);lawTick(this);this.current(p,dt);for(const fx of this.effects){fx.life-=dt;if(fx.arc===undefined)fx.y-=dt*22;}this.effects=this.effects.filter(f=>f.life>0);
-  const extraAction=tickCraft(this,dt);updateIndustry(this);updateContracts(this);updateEvents(this);updateEcology(this);
+  const extraAction=tickCraft(this,dt);updateIndustry(this);updateContracts(this);updateEvents(this);updateEcology(this);updateCompanions(this);
   if(p.action&&!extraAction){const a=p.action;const target=a.type==='tree'?this.trees[a.id]:a.type==='resource'?this.resources[a.id]:this.corpses.find(c=>c.id===a.corpse);if(!target||dist(p,target)>90)p.action=null;else{a.remaining-=dt;if(a.remaining<=0){if(a.type==='tree'){this.harvest(p,target,6);}else if(a.type==='resource'&&target.amount>0){target.amount--;if(target.industry&&target.amount<=0)target.regrowAt=this.time+240;grantSkill(p,'survival',2);if(target.kind==='honey')p.inventory.wax=(p.inventory.wax||0)+1;p.inventory[target.kind]=(p.inventory[target.kind]||0)+1;this.log('Собрано: '+ITEMS[target.kind].name);}else if(!a.type)this.butcher(target,p);p.action=null;this.onAction?.();}}}
 
   for(const z of this.places)if(dist(p,point(z.x,z.y))<z.r*TILE&&!this.visited.includes(z.id))this.visited.push(z.id);
@@ -237,7 +240,7 @@ export class World{
    if(enemy){combatAI(this,e,enemy,dt);continue;}
    if((e.retreatUntil||0)>this.elapsed){const from=e.retreatFrom==='player'?this.player:this.entityById.get(e.retreatFrom);if(from&&from.hp>0){retreat(this,e,from,dt);continue;}}
 
-   if(raidAI(this,e,dt))continue;
+   if(companionAI(this,e,dt)||raidAI(this,e,dt))continue;
    if(ANIMALS[e.role]){if(this.dungeonSpec){if(!e.patrolPoint||e.timer<=0){e.patrolPoint=this.rooms[Math.floor(this.random()*this.rooms.length)];e.patrolPoint=point(e.patrolPoint.x+.5,e.patrolPoint.y+.5);e.timer=30;}e.state='roam';this.navigate(e,e.patrolPoint,dt,ANIMALS[e.role].speed*.4);}else this.animalAI(e,dt);continue;}
    if(GUARDS.includes(e.role)){this.guardAI(e,dt);continue;}
    if(BANDITS.includes(e.role)){this.banditAI(e,dt);continue;}

@@ -1,3 +1,4 @@
+import {finishInnRest} from './settlement-services.js';
 import {RECIPES,SKILLS,USE_EFFECTS} from './adventure-content.js';
 import {TILE,ITEMS} from './content.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -12,11 +13,12 @@ export function stationAvailable(w,station){const p=w.player;if(station==='field
 export function craftProblem(w,recipe){const p=w.player;normalizeCrafts(p);if(!recipe)return 'Рецепт не найден.';if(p.imprisoned)return 'В камере ремесло недоступно.';if(p.action)return 'Сначала завершите текущее действие.';if(p.weaponDrawn)return 'Уберите оружие на R.';if(dangerNear(w))return 'Сначала отойдите от опасности.';if(skillLevel(p,recipe.skill)<recipe.level)return 'Нужен уровень '+recipe.level+'.';if(!stationAvailable(w,recipe.station))return 'Рядом нет подходящего рабочего места.';if(!hasMaterials(p.inventory,recipe.input))return 'Не хватает материалов.';return null;}
 export function craftDuration(p,recipe){return Math.round(recipe.seconds*(1-Math.min(.25,(skillLevel(p,recipe.skill)-1)*.04))*(p.inventory.tools>0?.85:1)*10)/10;}
 export function beginCraft(w,id){const recipe=RECIPES.find(r=>r.id===id),problem=craftProblem(w,recipe);if(problem)return {ok:false,message:problem};const p=w.player;removeItems(p.inventory,recipe.input);p.action={type:'craft',recipe:id,remaining:craftDuration(p,recipe),total:craftDuration(p,recipe),escrow:{...recipe.input},x:p.x,y:p.y};return {ok:true,message:'Работа начата: '+recipe.name+'.'};}
-export function cancelCraft(w){const p=w.player,a=p.action;if(!a||!['craft','campRest','rescue'].includes(a.type))return false;if(a.escrow)addItems(p.inventory,a.escrow);p.action=null;return true;}
-export function tickCraft(w,dt){const p=w.player,a=p.action;if(!a||!['craft','campRest','rescue'].includes(a.type))return false;
+export function cancelCraft(w){const p=w.player,a=p.action;if(!a||!['craft','campRest','rescue','innRest'].includes(a.type))return false;if(a.escrow)addItems(p.inventory,a.escrow);p.action=null;return true;}
+export function tickCraft(w,dt){const p=w.player,a=p.action;if(!a||!['craft','campRest','rescue','innRest'].includes(a.type))return false;
  if(distance(p,a)>65||p.weaponDrawn||dangerNear(w, p,180)){cancelCraft(w);w.log('Работа прервана. Неиспользованные материалы возвращены.');return true;}
  a.remaining-=dt;if(a.remaining>0)return true;
  if(a.type==='craft'){const recipe=RECIPES.find(r=>r.id===a.recipe);if(!recipe||!stationAvailable(w,recipe.station)){cancelCraft(w);return true;}addItems(p.inventory,recipe.output);for(const[k,n]of Object.entries(recipe.output))p.crafted[k]=(p.crafted[k]||0)+n;grantSkill(p,recipe.skill,12);w.log('Изготовлено: '+Object.entries(recipe.output).map(([k,n])=>ITEMS[k].name+' × '+n).join(', '));}
+ else if(a.type==='innRest'){if(!finishInnRest(w,a)){cancelCraft(w);w.log('Ночлег прерван: хозяин или еда недоступны. Деньги возвращены.');return true;}}
  else if(a.type==='campRest'){p.hp=Math.min(p.maxHp,p.hp+35+(skillLevel(p,'survival')-1)*2);p.stamina=p.maxStamina||300;grantSkill(p,'survival',8);w.log('Вы передохнули у костра и восстановили силы.');}
  else if(a.type==='rescue'){const e=w.entityById.get(a.entity);if(e?.hp>0&&e.captive){e.captive=false;e.following=true;e.state='following';w.log('Подмастерье освобождён. Проводите его до родного города.');}}
  p.action=null;w.onAction?.();return true;
