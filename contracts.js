@@ -1,3 +1,4 @@
+import {campaignSupplyOffer} from './campaign.js';
 import {ITEMS,TILE,GUARDS,BANDITS,point} from './content.js';
 import {normalizeCrafts,grantSkill,dangerNear} from './crafts.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -8,6 +9,7 @@ export function contractOffers(w,city){const z=w.cities.find(z=>z.id===city);if(
  for(const[k,count]of [['bandage',4],['rope',3],['planks',6]])result.push({...base,id:city+'-artisan-'+k+'-'+day,type:'make',item:k,count,reward:Math.ceil(ITEMS[k].price*count*1.5),title:'Заказ мастеру: '+ITEMS[k].name});
  for(const raid of w.living?.raids.filter(r=>r.city===city&&r.status==='active')||[])result.unshift({...base,deadline:null,id:'defend-'+raid.id,type:'defend',raid:raid.id,count:1,reward:180,title:'Оборона склада от налётчиков'});
  const crisis=w.living?.cities[city];if(crisis?.hunger>=3)result.unshift({...base,id:city+'-relief-'+day,type:'commission',item:'bread',count:12,reward:Math.ceil(ITEMS.bread.price*12*1.8),title:'Срочно: хлеб для голодающего города'});if(crisis?.outbreak)result.unshift({...base,id:city+'-fever-'+day,type:'commission',item:'medicine',count:5,reward:Math.ceil(ITEMS.medicine.price*5*1.8),title:'Срочно: лекарства от лихорадки'});
+ const lessonOffer=campaignSupplyOffer(w,city);if(lessonOffer)result.unshift(lessonOffer);
  const sites=w.workSites.filter(s=>s.city===city&&['logging','fishing','grainFarmer','beekeeper'].includes(s.kind));if(sites.length>=2)result.push({...base,id:city+'-survey-'+day,type:'survey',checkpoints:sites.slice(0,4).map(s=>({name:s.name,x:s.x,y:s.y})),count:Math.min(4,sites.length),reward:100,title:'Обойти рабочие стоянки'});
  for(const e of w.entities.filter(e=>(e.captive||e.following||e.rescued)&&e.hp>0&&e.rescueCity===city))result.push({...base,deadline:null,id:'rescue-'+e.id,type:'rescue',target:e.id,count:1,reward:190,title:'Вернуть подмастерья: '+e.name});
  return result;

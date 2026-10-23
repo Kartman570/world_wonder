@@ -1,7 +1,7 @@
 import {cancelCraft} from './crafts.js';
 import {normalizeStamina} from './player-movement.js';
 import {World,dist,TILE} from './simulation.js';
-const shared=['cityMemory','prisonStorage','quests','events','storages','warehouses','caravanStats','killCounts','discovery','visited','returnedRelics','relicVault','clearedDungeons'];
+const shared=['campaign','cityMemory','prisonStorage','quests','events','storages','warehouses','caravanStats','killCounts','discovery','visited','returnedRelics','relicVault','clearedDungeons'];
 const scalar=['kills','quest','relicReturned'];
 export class Expedition{
  constructor(surface=new World()){this.surface=surface;this.current=surface;this.dungeons=new Map();this.returnPoint=null;this.pendingDeath=false;}

@@ -1,3 +1,4 @@
+import {campaignEvent} from './campaign.js';
 import {recordCrime,warrant} from './law.js';
 import {ANIMALS,BANDITS,GUARDS,RANGED,TILE} from './content.js';
 const D=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),delta=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -26,7 +27,7 @@ function release(w,a,s){if(s.config.ranged){if(!(a.inventory.arrow>0))return;con
  a.inventory.arrow--;w.projectiles.push({x:a.x+Math.cos(angle)*18,y:a.y+Math.sin(angle)*18,vx:Math.cos(angle)*620,vy:Math.sin(angle)*620,owner:a.id,faction:a.faction,target:s.targetId,damage:s.config.damage,life:1.15});return;}
  const candidates=w.nearby(a,s.config.range+25).filter(e=>e.role!=='wizard'&&w.visibleFrom(a,e)&&D(a,e)<=s.config.range&&Math.abs(delta(Math.atan2(e.y-a.y,e.x-a.x)-s.angle))<=s.config.arc&&w.lineClear(a,e)&&(a===w.player||e===w.player&&w.hostile(a,e)||w.hostile(a,e)||e.id===s.targetId)).sort((b,c)=>D(a,b)-D(a,c));
  for(const e of s.config.cleave?candidates:candidates.slice(0,1)){
-  if(e.role==='dummy'){w.effects.push({x:e.x,y:e.y-40,text:'Попадание · тренировка',life:.8,color:'#e2c78e'});continue;}
+  if(e.role==='dummy'){if(a===w.player)campaignEvent(w,'dummy',{moving:!!e.moving,ranged:false});w.effects.push({x:e.x,y:e.y-40,text:'Попадание · тренировка',life:.8,color:'#e2c78e'});continue;}
   w.damage(a,e,s.config.damage);if(s.config.stun&&e.hp>0&&w.elapsed>=(e.stunResistUntil||0)){e.stunUntil=w.elapsed+s.config.stun;e.stunResistUntil=e.stunUntil+.55;e.pendingStrike=null;e.attack=0;e.state='stunned';w.effects.push({x:e.x,y:e.y-55,text:'ОГЛУШЕНИЕ · 1 с',life:1,color:'#e3d9a0'});}
  }
  w.effects.push({x:a.x,y:a.y,arc:s.angle,spread:s.config.arc,range:s.config.range,life:.16,color:s.kind==='hammer'?'#edbe8299':'#e0d6a677'});
