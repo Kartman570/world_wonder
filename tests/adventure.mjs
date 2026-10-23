@@ -12,7 +12,7 @@ function finish(w){for(let i=0;i<500&&w.player.action;i++)tickCraft(w,.1);assert
 {
  const w=alone(),p=w.player;p.inventory={fiber:12};assert.ok(beginCraft(w,'rope').ok);assert.equal(p.inventory.fiber,9);assert.equal(p.inventory.rope,undefined);const saved=World.restore(w.save());assert.equal(saved.player.action.recipe,'rope');finish(saved);assert.equal(saved.player.inventory.rope,1);assert.equal(saved.player.inventory.fiber,9);assert.equal(saved.player.crafted.rope,1);assert.ok(saved.player.skills.craft>0);
  cancelCraft(w);assert.ok(beginCraft(w,'rope').ok);p.x+=80;tickCraft(w,.1);assert.equal(p.inventory.fiber,12,'Interrupted crafting refunds exactly once');tickCraft(w,99);assert.equal(p.inventory.fiber,12);
- Object.assign(p,w.respawn);assert.ok(beginCraft(w,'rope').ok);w.die(p);assert.equal(w.storages[w.inCity(w.respawn)?.id]?.fiber||w.corpses.find(c=>c.player)?.inventory.fiber,12,'Reserved materials are recovered into the death inventory');
+ Object.assign(p,w.respawn);assert.ok(beginCraft(w,'rope').ok);w.die(p);assert.equal(w.storages[w.inCity(w.respawn)?.id]?.fiber||w.corpses.find(c=>c.formerPlayer)?.inventory.fiber||w.fallenEstates.find(e=>e.inventory.fiber)?.inventory.fiber,12,'Reserved materials are recovered into the death inventory');
  console.log('✓ Ремесло: резервирование, производство по времени, опыт, отмена, смерть и сохранение работы без дублирования');
 }
 {

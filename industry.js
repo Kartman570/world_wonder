@@ -1,10 +1,11 @@
+import {warehouseApproach,releaseWarehouse} from './warehouse-access.js';
 import {projectWorkRate} from './city-projects.js';
 import {treatPatient} from './world-events.js';
 import {INDUSTRIES,RECIPES} from './adventure-content.js';
 import {TILE,W,ITEMS,point,GUARDS} from './content.js';
 import {addItems,hasMaterials,removeItems,normalizeCrafts} from './crafts.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-function freeRoomSpot(w,b,index=0){const spots=[];for(let y=b.y+1;y<b.y+b.h-1;y++)for(let x=b.x+1;x<b.x+b.w-1;x++){const p=point(x+.5,y+.5);if(!w.blocked(p.x,p.y))spots.push(p);}return spots[(index*3+Math.floor(spots.length/2))%spots.length]||b.workSpot;}
+function freeRoomSpot(w,b,index=0){const spots=[];for(let y=b.y+1;y<b.y+b.h-1;y++)for(let x=b.x+1;x<b.x+b.w-1;x++){const p=point(x+.5,y+.5);if(!w.blocked(p.x,p.y)&&distance(p,b.workSpot)>80)spots.push(p);}return spots[(index*3+Math.floor(spots.length/2))%spots.length]||b.workSpot;}
 function fieldSpot(w,z,index){const origin=z.lumber||point(z.x-z.rx-10,z.y);for(let r=0;r<18;r++)for(let j=0;j<20;j++){const a=(j+index*3)*Math.PI/10,p={x:origin.x+Math.cos(a)*(r+3)*TILE,y:origin.y+Math.sin(a)*(r+3)*TILE};if(!w.blocked(p.x,p.y)&&!w.inCity(p)&&!w.interiorAt(p)&&!w.terrain(p).water&&!w.roadMask[Math.floor(p.y/TILE)*W+Math.floor(p.x/TILE)])return p;}return origin;}
 export function initializeIndustry(w,{restored=false}={}){
  normalizeCrafts(w.player);w.camps??=[];if(w.dungeonSpec||w.generatorVersion<8)return;
@@ -44,9 +45,9 @@ export function industryAI(w,e,dt){if(!e.industryRole||e.aggressor&&w.entityById
  if(def.outputs.some(k=>(e.inventory[k]||0)>=(role==='healer'?4:6))){w.deliverWorker(e,dt,def.outputs);return true;}
  if(!hasMaterials(e.inventory,input)){
   const available=Object.entries(input).some(([k,n])=>(e.inventory[k]||0)<n&&(store[k]||0)>0);
-  if(available&&distance(e,e.deliveryPoint)>28){e.state='fetchingSupplies';w.navigate(e,e.deliveryPoint,dt,88);return true;}
+  if(available&&!warehouseApproach(w,e,e.deliveryPoint,dt)){e.state=e.state==='waitingWarehouse'?e.state:'fetchingSupplies';return true;}
   if(available)for(const[k,n]of Object.entries(input)){const take=Math.min(Math.max(0,n-(e.inventory[k]||0)),store[k]||0);if(take>0){store[k]-=take;e.inventory[k]=(e.inventory[k]||0)+take;}}
-  if(!hasMaterials(e.inventory,input)){e.state='waitingForSupplies';return true;}
+  if(available)releaseWarehouse(w,e);if(!hasMaterials(e.inventory,input)){e.state='waitingForSupplies';return true;}
  }
  if(distance(e,e.work)>24){e.state='toWork';w.navigate(e,e.work,dt,80);return true;}
  if(hasMaterials(e.inventory,input)){removeItems(e.inventory,input);e.production={remaining:def.time,output:{...output}};e.state='craftingGoods';}else e.state='waitingForSupplies';return true;

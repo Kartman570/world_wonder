@@ -24,3 +24,5 @@ header .location{display:block;border-left:0;padding-left:0;flex:1;min-width:0;f
 .recipe-list{max-height:clamp(140px,calc(90vh - 415px),360px)}
 
 .panel-feedback{color:var(--gold);margin:8px 0}.panel-feedback:empty{display:none}
+/* Death is an explicit pause between people, never a dismissible inventory window. */
+#modal.death-screen{background:rgba(0,0,0,.94);backdrop-filter:blur(12px);pointer-events:auto}#modal.death-screen #close{display:none}#death-report h1{color:#b6a58c}#death-report>div{letter-spacing:3px;color:#ab7d66;font-size:10px}
