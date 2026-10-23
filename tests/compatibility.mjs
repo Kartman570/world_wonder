@@ -1,0 +1,8 @@
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {execFileSync} from 'node:child_process';
+import {World} from '../simulation.js';
+for(const tag of ['alpha-1','alpha-2']){const dir=await mkdtemp(join(tmpdir(),'ashen-compat-'));try{const archive=execFileSync('git',['archive',tag],{maxBuffer:50*1024*1024});execFileSync('tar',['-x','-C',dir],{input:archive});const {World:OldWorld}=await import(pathToFileURL(join(dir,'simulation.js')));const old=new OldWorld('compat-'+tag);old.player.inventory.gold=123;old.player.inventory.relicDawn=1;old.player.hp=83;old.time=4900;const map=Buffer.from(old.tiles),cityNames=old.cities.map(z=>z.name),w=World.restore(old.save());assert.equal(w.player.inventory.gold,123);assert.equal(w.player.inventory.relicDawn,1);assert.equal(w.player.hp,83);assert.equal(w.time,4900);assert.deepEqual(Buffer.from(w.tiles),map);assert.deepEqual(w.cities.map(z=>z.name),cityNames);assert.equal(w.living.started,4900,'Migration starts crises from saved time');assert.equal(w.entities.filter(e=>e.projectBuilder).length,3);assert.equal(w.entities.filter(e=>e.industryRole).length,21);assert.equal(w.entities.filter(e=>e.captive).length,3);assert.ok(w.projects);const again=World.restore(w.save());assert.equal(again.entities.length,w.entities.length);assert.deepEqual(again.projects,w.projects);assert.equal(again.living.started,w.living.started);console.log('✓ '+tag+': карта, города, время и вещи сохранены; миграции без дублей и ретроактивных кризисов');}finally{await rm(dir,{recursive:true,force:true});}}
