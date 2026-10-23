@@ -1,3 +1,4 @@
+import {eventNews} from './world-events.js';
 import {TILE,point,ITEMS,BANDITS,questOffers} from './content.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 export function createWorkSites(w){
@@ -45,7 +46,7 @@ export function heraldNews(w,cityId){
  const outbound=w.entities.find(e=>e.caravan&&e.hp>0&&e.faction===cityId),lines=[];
  if(inbound[0]){const e=inbound[0],z=w.cities.find(z=>z.id===cityId);lines.push('В '+z.name+' идёт '+e.name+' из '+w.factionName(e.faction)+'. До города '+Math.round(distance(e,point(z.x,z.y))/TILE)+' клеток.');}else lines.push('На подходе к городу обозов пока нет.');
  if(outbound)lines.push(outbound.name+' '+(outbound.rest>0?'готовится отправиться':'следует')+' в '+w.factionName(outbound.destination)+'.');
- lines.push('Чумы в городе пока нет! Рынок открыт, колодцы проверены.');return lines;
+ lines.push(...eventNews(w,cityId));return lines;
 }
 export function royalOffers(w,e){
  const base={city:e.faction,giver:'king'},offers=[{...base,id:e.faction+'-royal-hunt',title:'Королевский указ: сломить шайки',type:'kill',role:'bandits',count:12,reward:480},{...base,id:e.faction+'-royal-arsenal',title:'Запасы королевского арсенала',type:'collect',item:'ore',count:20,reward:350}];

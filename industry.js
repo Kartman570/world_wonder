@@ -1,3 +1,4 @@
+import {treatPatient} from './world-events.js';
 import {INDUSTRIES,RECIPES} from './adventure-content.js';
 import {TILE,W,ITEMS,point,GUARDS} from './content.js';
 import {addItems,hasMaterials,removeItems,normalizeCrafts} from './crafts.js';
@@ -38,7 +39,7 @@ export function industryAI(w,e,dt){if(!e.industryRole||e.aggressor&&w.entityById
  }
  const def=INDUSTRIES[role],recipe=RECIPES.find(r=>r.id===def.recipe),input=def.input||recipe.input,output=def.output||recipe.output;
  if(e.production){e.state='craftingGoods';if(distance(e,e.work)>28){w.navigate(e,e.work,dt,80);return true;}e.production.remaining-=dt;if(e.production.remaining<=0){addItems(e.inventory,e.production.output);e.produced=(e.produced||0)+1;e.production=null;w.log(e.name+' завершил работу: '+Object.keys(output).map(k=>ITEMS[k].name).join(', ')+'.',{at:e});}return true;}
- if(role==='healer'&&(e.inventory.medicine||0)>0){const patient=w.nearby(e,350).filter(g=>g.faction===e.faction&&GUARDS.includes(g.role)&&g.hp<g.maxHp-25&&!g.enemyId).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];if(patient){e.state='treating';w.navigate(e,patient,dt,95);if(distance(e,patient)<50){e.inventory.medicine--;patient.hp=Math.min(patient.maxHp,patient.hp+45);w.log(e.name+' перевязал раненого стражника.',{at:e});}return true;}}
+ if(role==='healer'&&(e.inventory.medicine||0)>0){const patient=w.nearby(e,350).filter(g=>g.faction===e.faction&&(g.sickness||GUARDS.includes(g.role)&&g.hp<g.maxHp-25)&&!g.enemyId).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];if(patient){e.state='treating';w.navigate(e,patient,dt,95);if(distance(e,patient)<50){if(!treatPatient(w,patient,e.inventory)){e.inventory.medicine--;patient.hp=Math.min(patient.maxHp,patient.hp+45);}w.log(e.name+' перевязал раненого стражника.',{at:e});}return true;}}
  if(def.outputs.some(k=>(e.inventory[k]||0)>=(role==='healer'?4:6))){w.deliverWorker(e,dt,def.outputs);return true;}
  if(!hasMaterials(e.inventory,input)){
   const available=Object.entries(input).some(([k,n])=>(e.inventory[k]||0)<n&&(store[k]||0)>0);
