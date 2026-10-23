@@ -11,7 +11,7 @@ export function aimPlayer(w,point,{lock=false}={}){const p=w.player;p.aimPoint={
 }
 
 export function lockedTarget(w){const p=w.player,e=w.entityById.get(p.lockedTargetId);if(!e||e.hp<=0||D(p,e)>680||!w.visibleFrom(p,e)){p.lockedTargetId=null;return null;}return e;}
-export function weaponFor(e){if(e.role==='player')return e.weapon||'natural';if(ANIMALS[e.role])return 'natural';if(RANGED.includes(e.role)&&(e.inventory.arrow||0)>0)return 'bow';return e.inventory.hammer?'hammer':e.inventory.axe&&['raider','forester'].includes(e.role)?'axe':'sword';}
+export function weaponFor(e){if(e.role==='player')return e.weapon||'natural';if(ANIMALS[e.role])return 'natural';if(RANGED.includes(e.role)&&(e.inventory.arrow||0)>0)return 'bow';return e.inventory.hammer?'hammer':e.inventory.axe?'axe':e.inventory.sword?'sword':'natural';}
 export function beginStrike(w,a,target=null,{angle=null,weapon=null}={}){
  if(a.hp<=0||(a.stunUntil||0)>w.elapsed||a.cooldown>0||a.pendingStrike)return false;
  const player=a===w.player;if(player&&(!a.weaponDrawn||w.elapsed<(a.drawUntil||0)))return false;

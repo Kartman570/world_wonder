@@ -18,3 +18,9 @@ header .location{display:block;border-left:0;padding-left:0;flex:1;min-width:0;f
 
 /* The backdrop stays visual; outside clicks are consumed by the modal controller. */
 #modal{pointer-events:none}.modal-card{pointer-events:auto}
+
+.skill-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:18px 0}.skill-card{padding:12px;background:#c5ae7809;border:1px solid var(--border)}.skill-card small{margin-top:8px;color:var(--muted)}.recipe-list{max-height:44vh;overflow:auto;padding-right:8px}.recipe-card{padding:14px 0;border-top:1px solid var(--border)}.recipe-card h3{margin:0 0 9px}.recipe-card small{color:var(--gold);line-height:1.7;margin-bottom:10px}.recipe-card .action{padding:8px 12px;margin-right:6px}.recipe-card button:disabled{opacity:.45;cursor:default}.tabs .selected{border-color:var(--gold);color:var(--gold)}.modal-card:has(#craft-panel),.modal-card:has(#contract-panel){width:min(850px,94vw);max-height:90vh}.hotkeys{flex-wrap:nowrap}@media(max-width:1100px){.hotkeys button{width:62px}.move-hint{display:none}}
+
+.recipe-list{max-height:clamp(140px,calc(90vh - 415px),360px)}
+
+.panel-feedback{color:var(--gold);margin:8px 0}.panel-feedback:empty{display:none}
