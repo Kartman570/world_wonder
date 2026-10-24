@@ -15,7 +15,7 @@ export function initializeAlienEcology(w){
  }
  // One-time background remains. They are real bodies and never replenish after looting.
  if(!w.alienEcology.desertInstalled){const d=w.loreGeography.desert;for(let y=-d.ry+12;y<d.ry;y+=19)for(let x=-d.rx+12;x<d.rx;x+=23){if((x/d.rx)**2+(y/d.ry)**2>.91)continue;const xx=Math.round(d.x+x+Math.sin(y*2+x)*3),yy=Math.round(d.y+y+Math.cos(x)*3),p=point(xx+.5,yy+.5);if((w.generatorVersion<10&&w.tile(xx,yy)!==15)||w.blocked(p.x,p.y)||w.interiorAt(p)||w.roadMask[yy*W+xx])continue;w.corpses.push({id:++w.id,...p,name:['Останки чужого путника','Высохшее тело у обломков','Кости под чужим знаменем'][Math.abs(xx+yy)%3],inventory:{},butchered:true,age:0,desertRemains:true});}w.alienEcology.desertInstalled=true;}
- for(const e of w.entities)if(e.faction==='emralaan'&&e.mounted&&!e.desertHardened){e.desertHardened=true;e.maxHp+=40;if(e.hp>0){e.hp+=40;e.inventory.armor=1;}}
+ for(const e of w.entities)if(e.race==='emralaan'&&e.mounted&&!e.desertHardened){e.desertHardened=true;e.maxHp+=40;if(e.hp>0){e.hp+=40;e.inventory.armor=1;}}
 
 }
 function fx(w,a,b){if(D(w.player,a)<1600)w.effects.push({x:a.x,y:a.y,tx:b.x,ty:b.y,beam:true,life:.3});}

@@ -19,7 +19,7 @@ export function weaponFor(e){if(e.role==='player')return e.weapon||'natural';if(
 export function beginStrike(w,a,target=null,{angle=null,weapon=null}={}){
  if(a.hp<=0||(a.stunUntil||0)>w.elapsed||a.cooldown>0||a.pendingStrike)return false;
  const player=a===w.player;if(player&&a.riding)dismountHorse(w,{combat:true});if(player&&(!a.weaponDrawn||w.elapsed<(a.drawUntil||0)))return false;
- const kind=weapon||weaponFor(a),base=WEAPONS[kind]||WEAPONS.natural,config={...base};if(a.faction==='emralaan'&&a.mounted){config.damage*=1.3;config.cooldown*=.8;}if(kind==='natural'){config.damage=player?6:ANIMALS[a.role]?.damage||10;if(['deer','elk','goat','bear','boar'].includes(a.role))config.stun=1;}
+ const kind=weapon||weaponFor(a),base=WEAPONS[kind]||WEAPONS.natural,config={...base};if((a.race==='emralaan'||a.faction==='emralaan')&&a.mounted){config.damage*=1.3;config.cooldown*=.8;}if(kind==='natural'){config.damage=player?6:ANIMALS[a.role]?.damage||10;if(['deer','elk','goat','bear','boar'].includes(a.role))config.stun=1;}
  if(player&&a.stamina<config.cost)return false;if(base.ranged&&!base.beam&&!(a.inventory.arrow>0))return false;
  const facing=angle??(target?Math.atan2(target.y-a.y,target.x-a.x):a.aimAngle??a.dir*Math.PI/4);
  if(target&&(D(a,target)>config.range+10||!w.visibleFrom(a,target)||!w.lineClear(a,target)))return false;

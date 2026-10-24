@@ -1,3 +1,4 @@
+import {purpleAt} from './lore-world.js';
 import {TILE,W} from './content.js';
 // Grass is not canopy. Only slow, deep forest outside settlements casts this shade.
 export function forestShade(world,p=world.player){
@@ -10,11 +11,11 @@ export function forestShade(world,p=world.player){
 export const AIR_GRACE=12,AIR_DAMAGE=4;
 export function atmospherePressure(w){
  if(w.dungeonSpec||!w.loreGeography)return 0;const p=w.player,a=w.loreGeography.ark;
- if(w.tile(p.x/TILE,p.y/TILE)!==16)return 0;
+ if(!purpleAt(w,p))return 0;
  const d=((p.x/TILE-a.x)/a.rx)**2+((p.y/TILE-a.y)/a.ry)**2;
  return .28+Math.max(0,1-d/.4)*.28;
 }
-export function breathingDanger(w){return !w.dungeonSpec&&w.tile(w.player.x/TILE,w.player.y/TILE)===16&&!(w.player.inventory.breathSuit>0&&w.player.breathSuitWorn)&&w.player.race!=='arctarian';}
+export function breathingDanger(w){return !w.dungeonSpec&&purpleAt(w,w.player)&&!(w.player.inventory.breathSuit>0&&w.player.breathSuitWorn)&&w.player.race!=='arctarian';}
 export function drawEdgePressure(c,w,width,height,forest=forestShade(w),time=w.elapsed){
  const purple=atmospherePressure(w),danger=breathingDanger(w),exposure=w.loreState?.exposure||0;
  const pulse=danger?Math.pow((1+Math.sin(time*5.8))/2,5):0;

@@ -12,7 +12,7 @@ export function prepareRooms(buildings){
   b.workSpot=point(b.x+b.w/2+.5,b.y+2.5);
   b.furniture=[];const add=(kind,x,y,w=1,h=1,solid=true)=>b.furniture.push({kind,x:b.x+x,y:b.y+y,w,h,solid});
   if(b.type==='stable'){add('rack',1,1,2,1);add('barrels',6,1);add('crates',1,4);b.workSpot=point(b.x+4.5,b.y+2.5);}
-  if(b.type==='arkVault'){add('arkNest',2,3,2,2);add('arkVessel',6,2,1,1);add('arkResonator',7,5,1,1);b.workSpot=point(b.x+b.w/2,b.y+b.h/2);}
+  if(b.type==='arkVault'){if(b.w>=15){for(const [x,y]of [[3,3],[10,3],[3,9],[10,9]])add('arkNest',x,y,2,2);}else add('arkNest',2,3,2,2);add('arkVessel',6,2,1,1);add('arkResonator',7,5,1,1);b.workSpot=point(b.x+b.w/2,b.y+b.h/2);}
   if(b.type==='cathedral')continue;
   if(b.type==='townhall'){add('table',2,2,2,1);add('shelf',1,1,2,1);}
   if(b.type==='barracks'){for(let j=1;j<b.w-2;j+=3)add('bed',j,1);add('rack',1,4);add('table',4,4,2,1);}
@@ -20,7 +20,7 @@ export function prepareRooms(buildings){
 
   if(b.type==='tailor'){add('loom',1,1,2,2);add('sewingTable',4,1,2,1);add('fiberBundle',1,4);b.workSpot=point(b.x+3.5,b.y+4.5);}
   if(b.type==='dungeonGate'){add('urn',1,1);add('shelf',4,1,2,1);if(b.ruined)add('fallenColumn',1,3,2,1);}
-  if(b.type==='house'){add('bed',1,1,1,1);add('table',3,1,1,1);b.workSpot=point(b.x+2.5,b.y+2.5);}
+  if(b.type==='house'){add('bed',1,1,1,1);if(b.w>=8){for(let x=3;x<b.w-1;x+=2)add('bed',x,1);add('bed',1,b.h-3);add('table',b.w-3,b.h-3);}else add('table',3,1,1,1);b.workSpot=point(b.x+2.5,b.y+2.5);}
   if(b.type==='smith'){add('forge',1,1);add('brazier',5,4);add('rack',5,1);add('counter',3,3,2,1);add('anvil',1,4);}
   if(b.type==='inn'){add('hearth',1,1);add('barrels',5,1);add('counter',3,3,2,1);add('table',1,4);}
   if(b.type==='apothecary'){add('shelf',1,1,2,1);add('herbs',5,1);add('counter',3,3,2,1);add('herbs',1,4);}

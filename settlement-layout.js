@@ -33,8 +33,8 @@ export function generateSettlement(w,z,clear,r){
  const stock=place('warehouse',z.isVillage?'Общий амбар':'Городские склады',z.isVillage?6:8,z.isVillage?6:7);
  for(const role of z.traderRoles){const b=place(shopType[role]||role,(names[role]||role)+' «'+['У трёх сосен','Медный ключ','Белый камень','Старая липа','Семь дорог'][Math.floor(r()*5)]+'»');b.traderRole=role;}
 
- const min=z.kind==='capital'?38:z.kind==='town'?16:7,target=min+(z.wardPlan?(z.kind==='capital'?30:z.kind==='town'?10:3):0)+Math.floor(r()*(z.kind==='capital'?16:z.kind==='town'?9:5));let houses=0;
- for(let j=0;j<target;j++){const b=place('house','Жилой дом',z.isVillage?5:5+Math.floor(r()*3),z.isVillage?5:5+Math.floor(r()*2),false);if(b)houses++;}
+ const min=w.generatorVersion>=11?(z.kind==='capital'?28:z.kind==='town'?12:5):z.kind==='capital'?38:z.kind==='town'?16:7,target=min+(w.generatorVersion>=11?(z.kind==='capital'?12:z.kind==='town'?5:2):z.wardPlan?(z.kind==='capital'?30:z.kind==='town'?10:3):0)+Math.floor(r()*(z.kind==='capital'?16:z.kind==='town'?9:5));let houses=0;
+ for(let j=0;j<target;j++){const b=place('house','Жилой дом',w.generatorVersion>=11?8+Math.floor(r()*3):z.isVillage?5:5+Math.floor(r()*3),w.generatorVersion>=11?7:z.isVillage?5:5+Math.floor(r()*2),false);if(b)houses++;}
  for(let j=houses;j<min;j++){const b=place('house','Жилой дом',5,5,false);if(b)houses++;}
  for(let j=houses;j<min;j++){if(place('house','Малый дом',4,5,false))houses++;}
  for(let j=houses;j<min;j++){if(place('house','Дом у острога',4,4,false))houses++;}
