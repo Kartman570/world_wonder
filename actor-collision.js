@@ -1,6 +1,8 @@
+import {purpleAt} from './lore-world.js';
 import {ANIMALS,TILE,W,H} from './content.js';
-export function bodyRadius(e){return e.role==='absent'||e.hp<=0?0:e.role==='caveBat'?8:ANIMALS[e.role]?Math.max(8,Math.min(22,ANIMALS[e.role].size*.75)):e.role==='merchant'?17:e.role==='brute'?16:12;}
+export function bodyRadius(e){return e.role==='absent'||e.hp<=0?0:e.role==='caveBat'?8:ANIMALS[e.role]?Math.max(8,Math.min(22,ANIMALS[e.role].size*.75)):e.mounted?24:e.race==='arctarian'?22:e.race==='fairy'?8:e.role==='merchant'?17:e.role==='brute'?16:12;}
 export function mapCanOccupy(w,e,x,y){
+ if(e.race!=='arctarian'&&purpleAt(w,{x,y})&&!(e===w.player&&e.inventory.breathSuit>0&&e.breathSuitWorn)){if(e===w.player&&(!w.loreState.airBlockedAt||w.elapsed>w.loreState.airBlockedAt+5)){w.log('Дыхание перехватывает. Без закрытого одеяния под фиолетовую черту не пройти.');w.loreState.airBlockedAt=w.elapsed||.001;}return false;}
  const radius=bodyRadius(e),swimmer=e===w.player;if(e!==w.player&&['guard','archer'].includes(e.role)&&!e.leader&&!e.roadPatrol&&w.inCity(e.home)?.id===e.faction&&w.inCity({x,y})?.id!==e.faction)return false;
  for(const [dx,dy]of [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius],[radius*.7,radius*.7],[-radius*.7,radius*.7],[radius*.7,-radius*.7],[-radius*.7,-radius*.7]])if(w.blocked(x+dx,y+dy,swimmer))return false;
  return true;

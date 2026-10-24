@@ -14,7 +14,7 @@ for(let seed=0;seed<24;seed++){
 assert.ok(bridgeRepairs>0,'Тестовые зерна должны содержать перезапись дороги поздней водой');
 console.log('✓ В 24 мирах дороги не затоплены, городская вода только в руслах, собор стоит в стороне и имеет отдельный подъезд');
 const w=new World('sanctuary-tour');
-assert.equal(w.libraryShelves.length,4);assert.equal(w.pedestals.length,3);assert.deepEqual(w.relicVault,{});
+assert.equal(w.libraryShelves.length,4);assert.equal(w.pedestals.length,9);assert.deepEqual(w.relicVault,{});
 for(const shelf of w.libraryShelves){Object.assign(w.player,shelf);assert.equal(resolveInteraction(w).kind,'libraryShelf');assert.equal(resolveInteraction(w).obj.tab,shelf.tab);assert.ok(w.path(w.spawn,shelf).length);}
 const dummies=w.entities.filter(e=>e.role==='dummy'),positions=dummies.map(e=>({x:e.x,y:e.y}));assert.equal(dummies.filter(e=>e.moving).length,2);assert.equal(dummies.filter(e=>!e.moving).length,2);
 w.entities=dummies;w.rebuildSpatial();for(let i=0;i<80;i++)w.update(.15);

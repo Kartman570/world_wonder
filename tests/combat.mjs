@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import {World,TILE} from '../simulation.js';
+import {World,TILE,W} from '../simulation.js';
 import {beginStrike,tickCombat,aimPlayer,guardWarnings,combatAI,assessForces} from '../combat.js';
 import {movePlayer} from '../player-movement.js';
 import {bodyRadius} from '../actor-collision.js';
-function arena(){const w=new World('combat-fixture');w.entities=[];w.corpses=[];w.effects=[];w.cities=[];w.respawn={x:0,y:0};Object.assign(w.player,{x:200*TILE+24,y:200*TILE+24,inventory:{sword:1,axe:1,hammer:1,bow:1,arrow:40},weaponDrawn:true,drawUntil:0,aimAngle:0,stamina:300});for(let y=190;y<220;y++)for(let x=190;x<230;x++){const i=y*640+x;w.tiles[i]=1;w.solids[i]=0;w.walls[i]=0;w.roomGrid[i]=0;}w.rebuildSpatial();return w;}
+function arena(){const w=new World('combat-fixture');w.entities=[];w.corpses=[];w.effects=[];w.cities=[];w.respawn={x:0,y:0};Object.assign(w.player,{x:200*TILE+24,y:200*TILE+24,inventory:{sword:1,axe:1,hammer:1,bow:1,arrow:40},weaponDrawn:true,drawUntil:0,aimAngle:0,stamina:300});for(let y=190;y<220;y++)for(let x=190;x<230;x++){const i=y*W+x;w.tiles[i]=1;w.solids[i]=0;w.walls[i]=0;w.roomGrid[i]=0;}w.rebuildSpatial();return w;}
 function target(w,dx,dy,role='citizen',faction='red'){const p=w.player,e=w.add(role,faction,(p.x+dx)/TILE,(p.y+dy)/TILE);e.hp=e.maxHp=100;e.inventory={sword:1};w.rebuildSpatial();return e;}
 function release(w,t=.35){w.elapsed+=t;tickCombat(w,w.player,t);}
 {

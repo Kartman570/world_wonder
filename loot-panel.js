@@ -8,7 +8,7 @@ export function renderLootPanel(root,world,anchor,{onChange=()=>{},onButcher=()=
  for(const [index,source]of sources.entries()){
   const {obj}=source,section=element('section',null,'loot-source'),heading=element('div',null,'loot-source-heading');heading.append(element('h3',obj.name||'Источник '+(index+1)),element('small',(obj.player?'Ваши вещи':source.kind==='woodPile'?'Лесозаготовка':source.kind==='landmark'?'Тайник':obj.animal?'Туша животного':'Тело')+' · '+(Math.round(source.distance/TILE*10)/10)+' кл.'));
   section.append(heading);const entries=Object.entries(obj.inventory||{}).filter(([,n])=>n>0);
-  for(const [key,count]of entries){const row=element('div',null,'item-row');row.append(element('span',(ITEMS[key]?.icon||'◇')+' '+(ITEMS[key]?.name||key)+' × '+count),button('Забрать',()=>{takeLoot(world,source,key);changed();}));section.append(row);}
+  for(const [key,count]of entries){const row=element('div',null,'item-row');row.append(element('span',(ITEMS[key]?.icon||'◇')+' '+(ITEMS[key]?.name||key)+' × '+count),button('Забрать',()=>{takeLoot(world,source,key);changed();}));if(ITEMS[key]?.description){const desc=element('small',ITEMS[key].description,'item-description');row.firstChild.append(desc);}section.append(row);}
   if(!entries.length)section.append(element('p',source.needsButchering?'Сначала разделайте тушу, чтобы получить мясо и шкуры.':'Предметов не осталось.','empty'));
   const actions=element('div',null,'actions');if(source.needsButchering)actions.append(button('Разделать тушу · 3 сек.',()=>onButcher(source)));
   if(entries.length)actions.append(button('Забрать из источника',()=>{takeLoot(world,source);changed();}));section.append(actions);root.append(section);

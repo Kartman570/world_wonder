@@ -43,10 +43,10 @@ function strength(e){return (e.hp/e.maxHp)*(ANIMALS[e.role]?.damage||(e.role==='
 export function assessForces(w,e,enemy){let allies=strength(e),opponents=0;for(const o of w.nearby(e,420)){if(!w.visibleFrom(e,o))continue;if(o.faction===e.faction||o.leader&&o.leader===e.leader)allies+=strength(o);else if(w.hostile(e,o)||o===enemy)opponents+=strength(o);}return {allies,opponents};}
 export function combatAI(w,e,enemy,dt){
  if((e.retreatUntil||0)>w.elapsed){retreat(w,e,enemy,dt);return;}
- if(w.elapsed>=(e.moraleAt||0)){e.moraleAt=w.elapsed+.8;const forces=assessForces(w,e,enemy),losing=e.hp/e.maxHp<(.22+(e.id%3)*.04),outnumbered=BANDITS.includes(e.role)&&forces.opponents>forces.allies*(1.35+(e.id%3)*.15);if((losing&&!['bear','caveSpider'].includes(e.role))||outnumbered){e.retreatUntil=w.elapsed+5+(e.id%4);e.enemyId=null;e.retreatFrom=enemy.id;retreat(w,e,enemy,dt);return;}}
+ if(w.elapsed>=(e.moraleAt||0)){e.moraleAt=w.elapsed+.8;const forces=assessForces(w,e,enemy),losing=e.hp/e.maxHp<(.22+(e.id%3)*.04),outnumbered=(BANDITS.includes(e.role)||e.mounted)&&forces.opponents>forces.allies*(1.35+(e.id%3)*.15);if((losing&&!['bear','caveSpider'].includes(e.role))||outnumbered){e.retreatUntil=w.elapsed+5+(e.id%4);e.enemyId=null;e.retreatFrom=enemy.id;retreat(w,e,enemy,dt);return;}}
  const d=D(e,enemy),kind=weaponFor(e),ranged=kind==='bow',angle=Math.atan2(enemy.y-e.y,enemy.x-e.x),side=e.id%2?1:-1,range=ranged?480:(WEAPONS[kind]?.range||61)-6;e.weaponDrawn=true;e.state=e.pendingStrike?'windingUp':'combat';
  if(d<=range&&w.lineClear(e,enemy)&&e.cooldown<=0)beginStrike(w,e,enemy);
- let tx,ty,speed=(ANIMALS[e.role]?.speed||105);
+ let tx,ty,speed=e.mounted?155:(ANIMALS[e.role]?.speed||105);
  if(ranged){const radial=d<160?-1:d>360?1:0;tx=e.x+Math.cos(angle)*radial*150+Math.cos(angle+side*Math.PI/2)*70;ty=e.y+Math.sin(angle)*radial*150+Math.sin(angle+side*Math.PI/2)*70;}
  else if(d>range){const flank=(e.id%5-2)*.23,slotAngle=Math.atan2(e.y-enemy.y,e.x-enemy.x)+flank;const target={x:enemy.x+Math.cos(slotAngle)*42,y:enemy.y+Math.sin(slotAngle)*42};if(!w.lineClear(e,target)){w.navigate(e,target,dt,speed);e.dir=(Math.round(angle/(Math.PI/4))+8)%8;return;}tx=target.x;ty=target.y;}
  else{const radial=e.cooldown>.35?-25:10;tx=e.x+Math.cos(angle)*radial+Math.cos(angle+side*Math.PI/2)*65;ty=e.y+Math.sin(angle)*radial+Math.sin(angle+side*Math.PI/2)*65;speed=70;}

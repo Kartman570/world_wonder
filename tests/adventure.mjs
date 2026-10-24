@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {Expedition} from '../expedition.js';
-import {World,TILE,ITEMS} from '../simulation.js';
+import {World,TILE,W,ITEMS} from '../simulation.js';
 import {resolveInteraction} from '../interactions.js';
 import {RECIPES,INDUSTRIES} from '../adventure-content.js';
 import {beginCraft,tickCraft,cancelCraft,skillLevel,deployCamp,fuelCamp,startCampRest,packCamp,equipGear,armorReduction,useSupply} from '../crafts.js';
@@ -42,6 +42,6 @@ function finish(w){for(let i=0;i<500&&w.player.action;i++)tickCraft(w,.1);assert
  console.log('✓ Переходы между поверхностью и подземельем не теряют зарезервированное сырьё');
 }
 {
- const w=new World('rescue-test'),e=w.entities.find(e=>e.captive),bandit=w.entities.find(b=>b.faction===e.captor&&['bandit','raider','brute'].includes(b.role));assert.equal(w.hostile(bandit,e),false);w.entities=w.entities.filter(o=>o===e);Object.assign(w.player,{x:e.x+30,y:e.y,weaponDrawn:false});w.rebuildSpatial();const offer=contractOffers(w,e.rescueCity).find(q=>q.target===e.id);w.acceptQuest(offer);assert.ok(beginRescue(w,e).ok);finish(w);assert.equal(e.following,true);assert.equal(e.captive,false);const before={x:200.5*TILE,y:200.5*TILE};Object.assign(e,before);Object.assign(w.player,{x:204.5*TILE,y:200.5*TILE});for(let y=198;y<204;y++)for(let x=198;x<207;x++){w.tiles[y*640+x]=3;w.solids[y*640+x]=0;w.walls[y*640+x]=0;w.roomGrid[y*640+x]=0;}w.rebuildSpatial();rescueAI(w,e,.15);assert.ok(Math.hypot(e.x-before.x,e.y-before.y)>0);Object.assign(e,{x:e.home.x+25,y:e.home.y});rescueAI(w,e,.15);assert.equal(e.rescued,true);assert.equal(w.questProgress(w.quests.find(q=>q.target===e.id)),1);const saved=World.restore(w.save());assert.equal(saved.entityById.get(e.id).rescued,true);
+ const w=new World('rescue-test'),e=w.entities.find(e=>e.captive),bandit=w.entities.find(b=>b.faction===e.captor&&['bandit','raider','brute'].includes(b.role));assert.equal(w.hostile(bandit,e),false);w.entities=w.entities.filter(o=>o===e);Object.assign(w.player,{x:e.x+30,y:e.y,weaponDrawn:false});w.rebuildSpatial();const offer=contractOffers(w,e.rescueCity).find(q=>q.target===e.id);w.acceptQuest(offer);assert.ok(beginRescue(w,e).ok);finish(w);assert.equal(e.following,true);assert.equal(e.captive,false);const before={x:200.5*TILE,y:200.5*TILE};Object.assign(e,before);Object.assign(w.player,{x:204.5*TILE,y:200.5*TILE});for(let y=198;y<204;y++)for(let x=198;x<207;x++){w.tiles[y*W+x]=3;w.solids[y*W+x]=0;w.walls[y*W+x]=0;w.roomGrid[y*W+x]=0;}w.rebuildSpatial();rescueAI(w,e,.15);assert.ok(Math.hypot(e.x-before.x,e.y-before.y)>0);Object.assign(e,{x:e.home.x+25,y:e.home.y});rescueAI(w,e,.15);assert.equal(e.rescued,true);assert.equal(w.questProgress(w.quests.find(q=>q.target===e.id)),1);const saved=World.restore(w.save());assert.equal(saved.entityById.get(e.id).rescued,true);
  console.log('✓ Спасение подмастерья: защита пленника от пленителей, развязывание, физическое сопровождение, возвращение домой и сохранение');
 }

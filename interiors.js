@@ -1,7 +1,7 @@
 import {drawIndustryProp} from './adventure-render.js';
 // Rooms occupy the same world coordinates as their exterior; no level switch or teleport.
 import {TILE,point} from './content.js';
-export const ENTERABLE=new Set(['prison','cage','house','smith','inn','warehouse','apothecary','castle','cathedral','library','training','wizardHall','tailor','dungeonGate','townhall','barracks','farmshop','armory','bowshop','leatherworks','provisions']);
+export const ENTERABLE=new Set(['arkVault','prison','cage','house','smith','inn','warehouse','apothecary','castle','cathedral','library','training','wizardHall','tailor','dungeonGate','townhall','barracks','farmshop','armory','bowshop','leatherworks','provisions']);
 export function prepareRooms(buildings){
  for(let i=0;i<buildings.length;i++){
   const b=buildings[i];b.id=i+1;b.enterable=ENTERABLE.has(b.type);if(!b.enterable)continue;
@@ -10,6 +10,7 @@ export function prepareRooms(buildings){
   b.door={x:b.x+Math.floor(b.w/2),y:b.y+b.h-1};b.entrance=point(b.door.x+.5,b.door.y+1.55);
   b.workSpot=point(b.x+b.w/2+.5,b.y+2.5);
   b.furniture=[];const add=(kind,x,y,w=1,h=1,solid=true)=>b.furniture.push({kind,x:b.x+x,y:b.y+y,w,h,solid});
+  if(b.type==='arkVault'){add('table',1,1,2,1);add('crates',4,1);add('shelf',1,4,1,1);}
   if(b.type==='cathedral')continue;
   if(b.type==='townhall'){add('table',2,2,2,1);add('shelf',1,1,2,1);}
   if(b.type==='barracks'){for(let j=1;j<b.w-2;j+=3)add('bed',j,1);add('rack',1,4);add('table',4,4,2,1);}

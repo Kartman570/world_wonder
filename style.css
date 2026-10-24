@@ -39,3 +39,5 @@ header .location{display:block;border-left:0;padding-left:0;flex:1;min-width:0;f
 #city-guide .reply{min-height:0;margin:8px 0;line-height:1.7}#city-guide .tabs{margin:10px 0}#guide-back{padding:2px 0 8px}
 @media(max-width:600px){.conversation-actions{grid-template-columns:1fr}.conversation{max-height:calc(90vh - 50px)}.conversation-header h1{font-size:30px}.conversation-body{max-height:36vh}.destination-grid{grid-template-columns:1fr;max-height:34vh}.trade-header{gap:8px}.tabs button{padding:8px 9px}}
 .conversation-body>button{padding:10px 13px;margin:6px 8px 0 0;font-size:11px}.conversation-actions button:focus-visible,.compact-choice summary:focus-visible{outline:1px solid var(--gold);outline-offset:2px}
+
+.item-description{display:block;max-width:48em;margin-top:6px;font:12px/1.6 Manrope,system-ui;color:var(--muted,#a9b3a3)}

@@ -23,28 +23,29 @@ export function configureGeography(w,r){
  if(w.generatorVersion===2)return v2.configureGeography(w,r);
  w.river={x:180+r()*220,phase:r()*Math.PI*2,a:32+r()*16,b:8+r()*8,f:.024+r()*.006,g:.055+r()*.012,axis:r()<.5?'vertical':'horizontal'};if(w.river.axis==='horizontal')w.river.x=150+r()*170;
  // The river already exists. Sample only dry city footprints, with no river-city quota.
+ const regionW=w.generatorVersion>=9?720:W,regionH=w.generatorVersion>=9?600:H;
  const archetypes=shuffle(r,['fortress','manor','market']),names=new Set();
  w.cities.forEach((z,i)=>{do{z.name=pick(r,stems)+pick(r,endings);}while(names.has(z.name));names.add(z.name);z.archetype=archetypes[i];z.rx=z.archetype==='market'?39:37+Math.floor(r()*8);z.ry=z.archetype==='market'?33:35+Math.floor(r()*5);z.r=Math.max(z.rx,z.ry)+2;z.palette=i;});
  chooseSettlementStyles(w,r);
  const dry=(z,x,y)=>{const horizontal=w.river.axis==='horizontal',along=horizontal?x:y,across=horizontal?y:x,extent=horizontal?z.rx:z.ry,width=horizontal?z.ry:z.rx;for(let a=along-extent-8;a<=along+extent+8;a+=2)if(Math.abs(naturalRiver(w,a)-across)<width+12)return false;return true;};
  let cities;
  for(let attempt=0;attempt<30000;attempt++){
-  const sample=w.cities.map(z=>({x:z.rx+14+Math.floor(r()*(W-z.rx*2-28)),y:z.ry+14+Math.floor(r()*(H-z.ry*2-28))}));
+  const sample=w.cities.map(z=>({x:z.rx+14+Math.floor(r()*(regionW-z.rx*2-28)),y:z.ry+14+Math.floor(r()*(regionH-z.ry*2-28))}));
   if(sample.every((p,i)=>dry(w.cities[i],p.x,p.y)&&sample.every((q,j)=>i===j||Math.hypot(p.x-q.x,p.y-q.y)>335))){cities=sample;break;}
  }
- if(!cities){const candidates=[];for(let y=55;y<=H-55;y+=15)for(let x=55;x<=W-55;x+=15)if(w.cities.every(z=>dry(z,x,y)))candidates.push({x,y});let best=0;for(let j=0;j<12000;j++){const sample=w.cities.map(z=>pick(r,candidates.filter(p=>p.x>z.rx+10&&p.x<W-z.rx-10&&p.y>z.ry+10&&p.y<H-z.ry-10))),score=Math.min(...sample.flatMap((p,i)=>sample.slice(i+1).map(q=>Math.hypot(p.x-q.x,p.y-q.y))));if(score>best){best=score;cities=sample;}if(score>335)break;}if(best<=335)throw new Error('No dry separated city sites: '+w.seed);}
+ if(!cities){const candidates=[];for(let y=55;y<=regionH-55;y+=15)for(let x=55;x<=regionW-55;x+=15)if(w.cities.every(z=>dry(z,x,y)))candidates.push({x,y});let best=0;for(let j=0;j<12000;j++){const sample=w.cities.map(z=>pick(r,candidates.filter(p=>p.x>z.rx+10&&p.x<regionW-z.rx-10&&p.y>z.ry+10&&p.y<regionH-z.ry-10))),score=Math.min(...sample.flatMap((p,i)=>sample.slice(i+1).map(q=>Math.hypot(p.x-q.x,p.y-q.y))));if(score>best){best=score;cities=sample;}if(score>335)break;}if(best<=335)throw new Error('No dry separated city sites: '+w.seed);}
  w.cities.forEach((z,i)=>Object.assign(z,cities[i]));
  w.regionName=pick(r,['Земли','Пределы','Долины','Тракты'])+' '+pick(r,['Семи ветров','Угасшего солнца','Янтарного леса','Забытых королей','Серого сокола','Тихих колоколов','Дальнего рубежа']);
 
  w.biomeSeed=Math.floor(r()*1e6);w.climate=r();
  const occupied=[...w.cities];
  for(const z of w.places.filter(z=>!['cathedral','oak','salt','north'].includes(z.id))){
-  for(let a=0;a<2000;a++){const x=25+Math.floor(r()*(W-50)),y=25+Math.floor(r()*(H-50));if(occupied.every(p=>Math.hypot(x-p.x,y-p.y)>(p.r||12)+z.r+20)){z.x=x;z.y=y;break;}}
+  for(let a=0;a<2000;a++){const x=25+Math.floor(r()*(regionW-50)),y=25+Math.floor(r()*(regionH-50));if(occupied.every(p=>Math.hypot(x-p.x,y-p.y)>(p.r||12)+z.r+20)){z.x=x;z.y=y;break;}}
   occupied.push(z);
   if(z.id==='lake')z.name=pick(r,landscapeNames);else if(z.id==='grove')z.name=pick(r,['Роща последнего эха','Вересковая чаща','Чёрный бор','Лес потерянных троп','Мшистая падь']);else z.name=pick(r,adjectives)+' '+({red:'лагерь',ash:'стан',thorn:'перевал',ruins:'город',barrow:'курган',shrine:'храм',cross:'постоялый двор',quarry:'карьер'})[z.id];
  }
  const main=w.places.find(z=>z.id==='lake');w.lakes=[{x:main.x,y:main.y,rx:19+r()*20,ry:12+r()*17,phase:r()*6}];
- for(let i=0,n=2+Math.floor(r()*4);i<n;i++){const x=25+r()*(W-50),y=25+r()*(H-50);if(w.cities.every(z=>Math.hypot(z.x-x,z.y-y)>z.r+45))w.lakes.push({x,y,rx:9+r()*23,ry:7+r()*18,phase:r()*6});}
+ for(let i=0,n=2+Math.floor(r()*4);i<n;i++){const x=25+r()*(regionW-50),y=25+r()*(regionH-50);if(w.cities.every(z=>Math.hypot(z.x-x,z.y-y)>z.r+45))w.lakes.push({x,y,rx:9+r()*23,ry:7+r()*18,phase:r()*6});}
  w.lake=w.lakes[0];if(w.generatorVersion>=4)prepareRiver(w,r);
 }
 function hash(x,y,seed){let n=Math.imul(x,374761393)^Math.imul(y,668265263)^seed;n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295;}
@@ -80,7 +81,7 @@ export function generateRoads(w,road,r){
  for(const z of w.places.filter(z=>!['cathedral','oak','salt','north','lake','grove'].includes(z.id))){const candidates=w.roads.flat().filter(p=>w.cities.every(c=>Math.hypot(c.x-p[0],c.y-p[1])>c.r+10));const near=candidates.sort((a,b)=>Math.hypot(a[0]-z.x,a[1]-z.y)-Math.hypot(b[0]-z.x,b[1]-z.y))[0]||w.mainRoads[0][3];road([near,[Math.round((near[0]+z.x)/2+(r()-.5)*25),Math.round((near[1]+z.y)/2)],[z.x,z.y]]);}
  // The sanctuary is a leaf of the road graph, chosen after every through-road exists.
  const cathedral=w.places.find(z=>z.id==='cathedral'),segments=w.roads.flatMap(points=>points.slice(1).map((b,i)=>[points[i],b]));let best;
- for(let attempt=0;attempt<16000;attempt++){const p={x:45+Math.floor(r()*(W-90)),y:45+Math.floor(r()*(H-90))};if(w.cities.some(z=>Math.hypot(z.x-p.x,z.y-p.y)<z.r+70)||w.places.some(z=>z.id!=='cathedral'&&Math.hypot(z.x-p.x,z.y-p.y)<z.r+40))continue;const near=segments.map(([a,b])=>distanceToSegment(p,a,b)).sort((a,b)=>a.distance-b.distance)[0];if(near.distance>=55&&near.distance<=90){let dry=true;for(let y=p.y-24;y<=p.y+24&&dry;y++)for(let x=p.x-26;x<=p.x+26;x++)if([2,4].includes(w.tile(x,y))){dry=false;break;}if(dry){best={...p,near};break;}}}
+ for(let attempt=0;attempt<16000;attempt++){const p={x:45+Math.floor(r()*((w.generatorVersion>=9?720:W)-90)),y:45+Math.floor(r()*((w.generatorVersion>=9?600:H)-90))};if(w.cities.some(z=>Math.hypot(z.x-p.x,z.y-p.y)<z.r+70)||w.places.some(z=>z.id!=='cathedral'&&Math.hypot(z.x-p.x,z.y-p.y)<z.r+40))continue;const near=segments.map(([a,b])=>distanceToSegment(p,a,b)).sort((a,b)=>a.distance-b.distance)[0];if(near.distance>=55&&near.distance<=90){let dry=true;for(let y=p.y-24;y<=p.y+24&&dry;y++)for(let x=p.x-26;x<=p.x+26;x++)if([2,4].includes(w.tile(x,y))){dry=false;break;}if(dry){best={...p,near};break;}}}
  if(!best)throw new Error('No detached sanctuary site for seed '+w.seed);
  Object.assign(cathedral,{x:best.x,y:best.y,r:34});const attach=best.near.point.map(Math.round),side=Math.sign(attach[0]-best.x)||1,x=best.x+side*32,y=best.y+27;
  w.cathedralRoad=[attach,[x,attach[1]],[x,y],[best.x,y],[best.x,best.y+22]];road(w.cathedralRoad);
