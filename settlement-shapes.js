@@ -1,3 +1,4 @@
+import {pointInPolygon,segmentDistance} from './map-geometry.js';
 export const STYLES=[
  {name:'Охристый камень',wall:'#b4a17b',house:'#c2ad87',roof:'#8a594a',cloth:'#b7865d',flag:'#c18b4c',mark:'sun'},
  {name:'Синий шифер',wall:'#909eaa',house:'#b5b8ae',roof:'#4d687c',cloth:'#718fa3',flag:'#5e8eae',mark:'star'},
@@ -7,6 +8,7 @@ export const STYLES=[
  {name:'Тёмное дерево',wall:'#8b8e7b',house:'#a99578',roof:'#5b5140',cloth:'#9e9b74',flag:'#b5a361',mark:'stag'}
 ];
 export function settlementInside(z,x,y,pad=0){
+ if(z.outline){if(!pointInPolygon(z.outline,x,y))return false;if(!pad)return true;return z.outline.every((p,i)=>segmentDistance(x,y,p,z.outline[(i+1)%z.outline.length])>=pad);}
  const u=(x-z.x)/(z.rx-pad),v=(y-z.y)/(z.ry-pad);if(Math.abs(u)>=1||Math.abs(v)>=1)return false;
  switch(z.pattern){
  case 'oval':return u*u+v*v<1;

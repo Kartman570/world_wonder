@@ -8,17 +8,17 @@ export function buildLoreLands(w,r){
  if(!supported(w))return;
  const jitter=n=>Math.round((r()-.5)*n),ark={x:1010+jitter(65),y:737+jitter(55),rx:125,ry:115},desert={x:1000+jitter(50),y:210+jitter(45),rx:250,ry:205};
  w.loreGeography={ark,desert};w.loreSites=[];w.rifts=[];
- const paint=(x,y,t)=>{if(x>1&&y>1&&x<W-2&&y<H-2)w.tiles[y*W+x]=w.roadMask[y*W+x]?(w.tiles[y*W+x]===5?5:1):t;};
+ const paint=(x,y,t)=>{if(w.generatorVersion>=10&&[2,4].includes(w.tile(x,y))&&!w.roadMask[y*W+x])return;if(x>1&&y>1&&x<W-2&&y<H-2)w.tiles[y*W+x]=w.roadMask[y*W+x]?(w.tiles[y*W+x]===5?5:1):t;};
  // Rivers and lakes remain natural: the new biomes change the banks, never erase water.
  for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){
   const t=w.tile(x,y);if([2,4,5,1,3,6].includes(t))continue;
   const sand=((x-desert.x)/desert.rx)**2+((y-desert.y)/desert.ry)**2;
-  if(sand<1+.07*Math.sin(y*.04))paint(x,y,15);
+  if(w.generatorVersion>=10){if(sand<.14&&![2,4,5,1,3,6].includes(t))paint(x,y,15);}else if(sand<1+.07*Math.sin(y*.04))paint(x,y,15);
   const basin=((x-ark.x)/ark.rx)**2+((y-ark.y)/ark.ry)**2;
   if(basin<1){if(basin>.66)paint(x,y,17);else if(basin<.40)paint(x,y,16);else paint(x,y,18);}
  }
  const flat=(x,y,radius,t=18)=>{for(let y1=-radius;y1<=radius;y1++)for(let x1=-radius;x1<=radius;x1++)paint(x+x1,y+y1,t);};
- const land=(id,name,x,y,rad=20,faction)=>{const z={id,name,x,y,r:rad,faction};w.places.push(z);return z;};
+ const land=(id,name,x,y,rad=20,faction)=>{if(w.generatorVersion>=10&&['emralaan','nomad-well','silent-chapel'].includes(id)){const dry=(xx,yy)=>{for(let dy=-16;dy<=16;dy++)for(let dx=-16;dx<=16;dx++)if([2,4].includes(w.tile(xx+dx,yy+dy)))return false;return true;};if(!dry(x,y)){let found=false;for(let radius=8;radius<120&&!found;radius+=8)for(let k=0;k<24;k++){const xx=x+Math.round(Math.cos(k*Math.PI/12)*radius),yy=y+Math.round(Math.sin(k*Math.PI/12)*radius);if(dry(xx,yy)){x=xx;y=yy;found=true;break;}}}}const z={id,name,x,y,r:rad,faction};w.places.push(z);return z;};
  const camp=land('emralaan','Пустошь · Седло ветра',desert.x-20,desert.y,36,'emralaan');
  const other=land('nomad-well','Синие костры',desert.x+90,desert.y+65,24,'emralaan');
  land('new-arktaria','Новая Арктария',ark.x,ark.y,110,'arktaria');
@@ -28,6 +28,7 @@ export function buildLoreLands(w,r){
  land('shard-reach','Поле осколков',1120+jitter(35),455+jitter(30),32);
  const chapel=land('silent-chapel','Безгласная часовня',590+jitter(40),665+jitter(25),18,'chapel');
  land('pale-shore','Бледный берег',680+jitter(35),805+jitter(35),20);
+ if(w.generatorVersion>=10)for(let y=ark.y+67;y<=ark.y+140;y++)for(let dx=-6;dx<=6;dx++)paint(ark.x+dx,y,18);
  const attach=[...w.roads.flat()].filter(p=>w.cities.every(c=>D({x:p[0],y:p[1]},c)>c.r+8)).sort((a,b)=>b[0]-a[0])[0]||[680,450];
  w.paintRoad([attach,[745,attach[1]+30],[780,480],[850,550],[ark.x,ark.y+145],[ark.x,ark.y+82]]);
  w.paintRoad([[780,480],[815,365],[850,290],[camp.x,camp.y+25]]);

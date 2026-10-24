@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {World,TILE,W,dist} from '../simulation.js';
+import {World as HistoricalWorld,TILE,W,dist} from '../simulation.js';
+// Regression coverage for maps saved before the watershed generator.
+class World extends HistoricalWorld{constructor(seed,options={}){super(seed,{generatorVersion:9,...options});}}
 import {resolveInteraction} from '../interactions.js';
 function segmentDistance(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p.x-a[0])*dx+(p.y-a[1])*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p.x-a[0]-t*dx,p.y-a[1]-t*dy);}
 let bridgeRepairs=0;

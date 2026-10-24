@@ -8,7 +8,7 @@ import {takeLoot,nearbyLootSources} from '../loot.js';
 import {useSupply} from '../crafts.js';
 import {Expedition} from '../expedition.js';
 const w=new World('lore-suite'),p=w.player;
-assert.equal(W*H,640*480*4);assert.equal(w.generatorVersion,9);assert.equal(w.entities.find(e=>e.role==='wizard').name,'Волшебник Софос');assert.equal(w.pedestals.length,9);
+assert.equal(W*H,640*480*4);assert.equal(w.generatorVersion,10);assert.equal(w.entities.find(e=>e.role==='wizard').name,'Волшебник Софос');assert.equal(w.pedestals.length,9);
 assert.ok(w.cities.every(z=>z.x<720&&z.y<600));assert.ok(w.rifts.length>=5);assert.equal(relicCatalog(w).length,9);
 for(const r of RELICS){const copies=w.entities.reduce((n,e)=>n+(e.inventory[r.item]||0),0)+w.landmarks.reduce((n,l)=>n+(l.inventory[r.item]||0),0);assert.equal(copies,1,r.item+' has exactly one physical source');assert.equal(useSupply(w,r.item).ok,false,'Artifacts cannot be used');assert.equal(w.relicVault[r.item],undefined);}
 assert.equal(relicAssignments(w).length,3);beginRelicHunt(w);assert.equal(w.loreState.commissioned,true);

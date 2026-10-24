@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {World,TILE} from '../simulation.js';
+import {World as HistoricalWorld,TILE} from '../simulation.js';
+// Regression coverage for maps saved before the watershed generator.
+class World extends HistoricalWorld{constructor(seed,options={}){super(seed,{generatorVersion:9,...options});}}
 import {PLACES} from '../content.js';
 const a=new World('atlas-A'),b=new World('atlas-B'),again=new World('atlas-A');
 assert.deepEqual(a.tiles,again.tiles);assert.deepEqual(a.buildings,again.buildings);assert.deepEqual(a.places,again.places);

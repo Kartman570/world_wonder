@@ -1,3 +1,4 @@
+import * as v10 from './worldgen-v10.js';
 import * as v7 from './worldgen-v7.js';
 import {chooseSettlementStyles} from './settlement-shapes.js';
 import {generateSettlement} from './settlement-layout.js';
@@ -15,6 +16,7 @@ const endings=['оград','овск','инск','одоль','оречье','�
 const adjectives=['Безмолвный','Пепельный','Забытый','Тихий','Медный','Змеиный','Сумрачный','Серебряный','Старый','Соколиный','Зелёный','Чёрный'];
 const landscapeNames=['Озеро глухих колоколов','Озеро трёх лун','Чёрная чаша','Лесное зеркало','Серебряная заводь','Вдовий плёс','Вода без берегов','Озеро янтарных сосен'];
 export function configureGeography(w,r){
+ if(w.generatorVersion>=10)return v10.configureGeography(w,r);
  if(w.generatorVersion===7)return v7.configureGeography(w,r);
  if(w.generatorVersion===6)return v6.configureGeography(w,r);
  if(w.generatorVersion===5)return v5.configureGeography(w,r);
@@ -51,6 +53,7 @@ export function configureGeography(w,r){
 function hash(x,y,seed){let n=Math.imul(x,374761393)^Math.imul(y,668265263)^seed;n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295;}
 function noise(x,y,seed){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,s=fx*fx*(3-2*fx),t=fy*fy*(3-2*fy),a=hash(ix,iy,seed)*(1-s)+hash(ix+1,iy,seed)*s,b=hash(ix,iy+1,seed)*(1-s)+hash(ix+1,iy+1,seed)*s;return a*(1-t)+b*t;}
 export function surfaceTile(w,x,y){
+ if(w.generatorVersion>=10)return v10.surfaceTile(w,x,y);
  if(w.generatorVersion===7)return v7.surfaceTile(w,x,y);
  if(w.generatorVersion===6)return v6.surfaceTile(w,x,y);
  if(w.generatorVersion===5)return v5.surfaceTile(w,x,y);
@@ -65,6 +68,7 @@ export function surfaceTile(w,x,y){
 }
 const distanceToSegment=(p,a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p.x-a[0])*dx+(p.y-a[1])*dy)/(dx*dx+dy*dy||1)));const q=[a[0]+t*dx,a[1]+t*dy];return {distance:Math.hypot(p.x-q[0],p.y-q[1]),point:q};};
 export function generateRoads(w,road,r){
+ if(w.generatorVersion>=10)return v10.generateRoads(w,road,r);
  if(w.generatorVersion===7)return v7.generateRoads(w,road,r);
  if(w.generatorVersion===6)return v6.generateRoads(w,road,r);
  if(w.generatorVersion===5)return v5.generateRoads(w,road,r);
@@ -88,6 +92,7 @@ export function generateRoads(w,road,r){
  const camp=w.places.find(z=>z.id==='thorn');Object.assign(w.territories[3],point(camp.x,camp.y));
 }
 export function generateCity(w,z,clear,r){
+ if(w.generatorVersion>=10)return v10.generateCity(w,z,clear,r);
  if(w.generatorVersion===7)return v7.generateCity(w,z,clear,r);
  if(w.generatorVersion===6)return v6.generateCity(w,z,clear,r);
  if(w.generatorVersion===5)return v5.generateCity(w,z,clear,r);
@@ -160,6 +165,7 @@ export function generateCity(w,z,clear,r){
 }
 
 export function finalizeHydrology(w){
+ if(w.generatorVersion>=10)return v10.finalizeHydrology(w);
  if(w.generatorVersion===7)return v7.finalizeHydrology(w);
  if(w.generatorVersion===6)return v6.finalizeHydrology(w);
  if(w.generatorVersion===5)return v5.finalizeHydrology(w);

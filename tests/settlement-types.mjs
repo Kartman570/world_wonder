@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {World,W,TILE,TRADE} from '../simulation.js';
+import {World as HistoricalWorld,W,TILE,TRADE} from '../simulation.js';
+// Regression coverage for maps saved before the watershed generator.
+class World extends HistoricalWorld{constructor(seed,options={}){super(seed,{generatorVersion:9,...options});}}
 import {settlementInside} from '../settlement-shapes.js';
 import {naturalRiver,riverCenter} from '../settlements.js';
 const patterns=new Set(),palettes=new Set();
