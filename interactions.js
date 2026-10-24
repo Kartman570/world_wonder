@@ -1,9 +1,12 @@
+import {CORPSE_REACH} from './loot.js';
 import {canUseCell} from './law.js';
 import {ITEMS,ANIMALS,TRADE,TILE} from './content.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 // The action discriminant belongs to the descriptor; resource.kind remains on obj.
 export function resolveInteraction(world,p=world.player){
  const candidates=[];const add=(kind,obj,label,priority=1)=>candidates.push({kind,obj,x:obj.x,y:obj.y,label,priority});
+ if(world.trainingRack&&world.canInteract(p,world.trainingRack,115))add('trainingStock',world.trainingRack,'Учебное оружие · получить комплект',-1);
+ for(const horse of world.entities.filter(e=>e.role==='horse'&&e.hp>0))if(!horse.horse.rider&&world.canInteract(p,horse,145))add('horse',horse,horse.name+' · поводья',0);
  for(const z of world.cities||[]){const board={city:z.id,x:(z.x+4.5)*TILE,y:(z.y+4.5)*TILE};if(world.canInteract(p,board,90))add('contractBoard',board,'Доска поручений · прочитать',-1);}
  for(const site of world.loreSites||[])if(world.canInteract(p,site,120))add('loreSite',site,site.title+' · осмотреть',1);
  for(const camp of world.camps||[])if(world.canInteract(p,camp,100))add('camp',camp,'Походный лагерь · отдых и сундук',1);
@@ -17,8 +20,8 @@ export function resolveInteraction(world,p=world.player){
  for(const l of world.landmarks)if(Object.values(l.inventory).some(n=>n>0)&&world.canInteract(p,l,90))add('landmark',l,l.name+' · открыть',0);
  for(const r of world.resources)if(r.amount>0&&world.canInteract(p,r,60))add('resource',r,ITEMS[r.kind].name+' · собрать',0);
  for(const pile of world.woodPiles||[])if((pile.inventory.log||0)>0&&world.canInteract(p,pile,80))add('woodPile',pile,'Брёвна × '+pile.inventory.log+' · забрать',0);
- for(const c of world.corpses)if((Object.values(c.inventory||{}).some(n=>n>0)||c.animal&&!c.butchered)&&world.canInteract(p,c,75))add('corpse',c,c.name+' · '+(c.animal&&!c.butchered?'разделать':'обыскать'),0);
- for(const e of world.entities)if(e.hp>0&&!ANIMALS[e.role]&&!['bandit','banditArcher','brute','raider','nomad','nomadArcher'].includes(e.role)&&world.canInteract(p,e))add('npc',e,e.name+' · '+(TRADE[e.role]&&!e.noTrade?'торговать':e.role==='dummy'?'тренировка':'говорить'));
+ for(const c of world.corpses)if((Object.values(c.inventory||{}).some(n=>n>0)||c.animal&&!c.butchered)&&world.canInteract(p,c,CORPSE_REACH))add('corpse',c,c.name+' · '+(c.animal&&!c.butchered?'разделать':'обыскать'),-2);
+ for(const e of world.entities)if(e.hp>0&&!ANIMALS[e.role]&&!['horse','bandit','banditArcher','brute','raider','nomad','nomadArcher'].includes(e.role)&&world.canInteract(p,e))add('npc',e,e.name+' · '+(TRADE[e.role]&&!e.noTrade?'торговать':e.role==='dummy'?'тренировка':'говорить'));
  if(!candidates.length){const t=world.treesNear(p,60).filter(t=>world.canInteract(p,t,60)).sort((a,b)=>distance(a,p)-distance(b,p))[0];if(t)add('tree',t,'Дерево · срубить');}
  return candidates.sort((a,b)=>a.priority-b.priority||distance(a,p)-distance(b,p))[0]||null;
 }
@@ -26,4 +29,4 @@ export function beginGather(world,target){
  if(target?.kind!=='resource'||!target.obj||!(target.obj.amount>0)||!world.canInteract(world.player,target.obj,60))return false;
  world.player.action={type:'resource',id:target.obj.id,remaining:target.obj.kind==='ore'?4:2};return true;
 }
-export function hoveredNpc(world,point,zoom=1){let selected=null,best=Infinity;for(const e of world.entities){if(e.hp<=0)continue;const pose=world.renderPose(e);if(!world.visibleFrom(world.player,pose))continue;const animal=ANIMALS[e.role],height=e.race==='arctarian'?114:e.mounted?105:e.role==='wizard'?100:animal?['deer','elk'].includes(e.role)?90:55:80;const dx=Math.abs(point.x-pose.x),dy=Math.abs(point.y-(pose.y-height/2));if(dx>(animal?Math.max(22,animal.size*1.5):22)/zoom||dy>(height/2+4)/zoom)continue;const score=dx*dx+dy*dy;if(score<best){best=score;selected=e;}}return selected;}
+export function hoveredNpc(world,point,zoom=1){let selected=null,best=Infinity;for(const e of world.entities){if(e.hp<=0)continue;const pose=world.renderPose(e);if(!world.visibleFrom(world.player,pose))continue;const animal=ANIMALS[e.role],height=e.race==='arctarian'?114:e.mounted?105:e.role==='wizard'?100:animal?['deer','elk'].includes(e.role)?90:55:80;const dx=Math.abs(point.x-pose.x),dy=Math.abs(point.y-(pose.y-height/2));if(dx>(animal?Math.max(22,animal.size*1.5):e.horse||e.mounted?45:22)/zoom||dy>(height/2+4)/zoom)continue;const score=dx*dx+dy*dy;if(score<best){best=score;selected=e;}}return selected;}

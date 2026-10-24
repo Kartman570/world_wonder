@@ -1,3 +1,6 @@
+import {alertAttack} from './combat-alerts.js';
+import {cutWeb} from './wild-hazards.js';
+import {dismountHorse} from './horses.js';
 import {campaignEvent} from './campaign.js';
 import {recordCrime,warrant} from './law.js';
 import {ANIMALS,BANDITS,GUARDS,RANGED,TILE} from './content.js';
@@ -15,7 +18,7 @@ export function lockedTarget(w){const p=w.player,e=w.entityById.get(p.lockedTarg
 export function weaponFor(e){if(e.role==='player')return e.weapon||'natural';if(ANIMALS[e.role])return 'natural';if(RANGED.includes(e.role)&&(e.inventory.arrow||0)>0)return 'bow';return e.inventory.hammer?'hammer':e.inventory.axe?'axe':e.inventory.sword?'sword':'natural';}
 export function beginStrike(w,a,target=null,{angle=null,weapon=null}={}){
  if(a.hp<=0||(a.stunUntil||0)>w.elapsed||a.cooldown>0||a.pendingStrike)return false;
- const player=a===w.player;if(player&&(!a.weaponDrawn||w.elapsed<(a.drawUntil||0)))return false;
+ const player=a===w.player;if(player&&a.riding)dismountHorse(w,{combat:true});if(player&&(!a.weaponDrawn||w.elapsed<(a.drawUntil||0)))return false;
  const kind=weapon||weaponFor(a),base=WEAPONS[kind]||WEAPONS.natural,config={...base};if(kind==='natural'){config.damage=player?6:ANIMALS[a.role]?.damage||10;if(['deer','elk','goat','bear','boar'].includes(a.role))config.stun=1;}
  if(player&&a.stamina<config.cost)return false;if(base.ranged&&!(a.inventory.arrow>0))return false;
  const facing=angle??(target?Math.atan2(target.y-a.y,target.x-a.x):a.aimAngle??a.dir*Math.PI/4);
@@ -23,7 +26,7 @@ export function beginStrike(w,a,target=null,{angle=null,weapon=null}={}){
  a.aimAngle=facing;a.dir=(Math.round(facing/(Math.PI/4))+8)%8;a.cooldown=config.cooldown;a.attack=config.windup+.2;a.weaponDrawn=true;a.pendingStrike={remaining:config.windup,kind,angle:facing,targetId:target?.id??null,config};if(player)a.stamina-=config.cost;return true;
 }
 export function attackPlayer(w){const p=w.player;w.normalizeEquipment();if(!p.weaponDrawn)return {ok:false,message:'R — достать оружие.'};if((p.stunUntil||0)>w.elapsed)return {ok:false,message:'Вы оглушены.'};const target=p.weapon==='bow'?lockedTarget(w):null;return {ok:beginStrike(w,p,target,{angle:target?null:p.aimAngle,weapon:p.weapon})};}
-function release(w,a,s){if(s.config.ranged){if(!(a.inventory.arrow>0))return;const target=s.targetId==='player'?w.player:w.entityById.get(s.targetId);let angle=s.angle;if(target&&target.hp>0&&w.visibleFrom(a,target)){const distance=D(a,target),time=distance/620,previous=w.motion.get(target.id),vx=previous?Math.max(-180,Math.min(180,(target.x-previous.x)/.15)):0,vy=previous?Math.max(-180,Math.min(180,(target.y-previous.y)/.15)):0;angle=Math.atan2(target.y+vy*time-a.y,target.x+vx*time-a.x);}
+function release(w,a,s){cutWeb(w,a,s);if(s.config.ranged){if(!(a.inventory.arrow>0))return;const target=s.targetId==='player'?w.player:w.entityById.get(s.targetId);let angle=s.angle;if(target&&w.hostile(target,a))alertAttack(w,a,target);if(target&&target.hp>0&&w.visibleFrom(a,target)){const distance=D(a,target),time=distance/620,previous=w.motion.get(target.id),vx=previous?Math.max(-180,Math.min(180,(target.x-previous.x)/.15)):0,vy=previous?Math.max(-180,Math.min(180,(target.y-previous.y)/.15)):0;angle=Math.atan2(target.y+vy*time-a.y,target.x+vx*time-a.x);}
  a.inventory.arrow--;w.projectiles.push({x:a.x+Math.cos(angle)*18,y:a.y+Math.sin(angle)*18,vx:Math.cos(angle)*620,vy:Math.sin(angle)*620,owner:a.id,faction:a.faction,target:s.targetId,damage:s.config.damage,life:1.15});return;}
  const candidates=w.nearby(a,s.config.range+25).filter(e=>e.role!=='wizard'&&w.visibleFrom(a,e)&&D(a,e)<=s.config.range&&Math.abs(delta(Math.atan2(e.y-a.y,e.x-a.x)-s.angle))<=s.config.arc&&w.lineClear(a,e)&&(a===w.player||e===w.player&&w.hostile(a,e)||w.hostile(a,e)||e.id===s.targetId)).sort((b,c)=>D(a,b)-D(a,c));
  for(const e of s.config.cleave?candidates:candidates.slice(0,1)){

@@ -1,7 +1,10 @@
 import {purpleAt} from './lore-world.js';
 import {ANIMALS,TILE,W,H} from './content.js';
-export function bodyRadius(e){return e.role==='absent'||e.hp<=0?0:e.role==='caveBat'?8:ANIMALS[e.role]?Math.max(8,Math.min(22,ANIMALS[e.role].size*.75)):e.mounted?24:e.race==='arctarian'?22:e.race==='fairy'?8:e.role==='merchant'?17:e.role==='brute'?16:12;}
+export function bodyRadius(e){return e.role==='absent'||e.hp<=0||e.horse?.rider?0:e.role==='caveBat'?8:ANIMALS[e.role]?Math.max(8,Math.min(22,ANIMALS[e.role].size*.75)):e.mounted||e.riding||e.role==='horse'?24:e.race==='arctarian'?22:e.race==='fairy'?8:e.role==='merchant'?17:e.role==='brute'?16:12;}
 export function mapCanOccupy(w,e,x,y){
+ if(e.relicGuardian&&Math.hypot(x-e.relicGuardian.anchor.x,y-e.relicGuardian.anchor.y)>e.relicGuardian.radius)return false;
+ if(e.patrolTerritory){const z=e.patrolTerritory;if(((x/TILE-z.x)/z.rx)**2+((y/TILE-z.y)/z.ry)**2>1)return false;}
+ if(e.riding&&(w.interiorAt({x,y})||[2,4].includes(w.tile(x/TILE,y/TILE))))return false;
  if(e.race!=='arctarian'&&purpleAt(w,{x,y})&&!(e===w.player&&e.inventory.breathSuit>0&&e.breathSuitWorn)){if(e===w.player&&(!w.loreState.airBlockedAt||w.elapsed>w.loreState.airBlockedAt+5)){w.log('Дыхание перехватывает. Без закрытого одеяния под фиолетовую черту не пройти.');w.loreState.airBlockedAt=w.elapsed||.001;}return false;}
  const radius=bodyRadius(e),swimmer=e===w.player;if(e!==w.player&&['guard','archer'].includes(e.role)&&!e.leader&&!e.roadPatrol&&w.inCity(e.home)?.id===e.faction&&w.inCity({x,y})?.id!==e.faction)return false;
  for(const [dx,dy]of [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius],[radius*.7,radius*.7],[-radius*.7,radius*.7],[radius*.7,-radius*.7],[-radius*.7,-radius*.7]])if(w.blocked(x+dx,y+dy,swimmer))return false;
@@ -9,7 +12,7 @@ export function mapCanOccupy(w,e,x,y){
 }
 export function canOccupy(w,e,x,y){
  const radius=bodyRadius(e);if(!mapCanOccupy(w,e,x,y))return false;
- for(const o of w.nearby(e,90)){if(!w.visibleFrom(e,o)||!w.visibleFrom(o,e))continue;const gap=radius+bodyRadius(o),before=Math.hypot(e.x-o.x,e.y-o.y),after=Math.hypot(x-o.x,y-o.y);if(after<gap-.1&&after<before-.01)return false;}
+ for(const o of w.nearby(e,90)){if(!bodyRadius(o)||o.id===e.riding||!w.visibleFrom(e,o)||!w.visibleFrom(o,e))continue;const gap=radius+bodyRadius(o),before=Math.hypot(e.x-o.x,e.y-o.y),after=Math.hypot(x-o.x,y-o.y);if(after<gap-.1&&after<before-.01)return false;}
  return true;
 }
 // Keep solid bodies, but plan passing maneuvers before two streams touch.

@@ -1,3 +1,4 @@
+import {guardianClue} from './quest-guardians.js';
 import {RELICS,RELIC_KEYS} from './lore-content.js';
 import {TILE} from './content.js';
 export function relicCatalog(w){return w.generatorVersion>=9?RELICS:RELICS.slice(0,3);}
@@ -20,7 +21,7 @@ export function renderHunt(root,w,{select=()=>{},close=()=>{}}={}){
  const list=document.createElement('div');list.className='quest-list';
  for(const r of relicAssignments(w)){
  const d=document.createElement('details');d.className='compact-choice';d.append(el('summary',r.title+(w.player.inventory[r.item]>0?' · В СУМКЕ':'')+' · '+r.reward+' зол.'));
- const originId={hushLens:'silent-chapel',threadSpool:'red',windKnot:'emralaan'}[r.item],origin=w.places.find(z=>z.id===originId);d.append(el('p',r.clue));if(origin)d.append(el('p','Последняя весть: '+origin.name+'.'));const clue=el('p','Искомая вещь: '+r.name+'. '+r.description);d.append(clue);
+ const originId={hushLens:'silent-chapel',threadSpool:'red',windKnot:'emralaan'}[r.item],origin=w.places.find(z=>z.id===originId);d.append(el('p',r.clue));if(origin)d.append(el('p','Последняя весть: '+origin.name+'.'));const trace=guardianClue(w,r.item);if(trace)d.append(el('p',trace));const clue=el('p','Искомая вещь: '+r.name+'. '+r.description);d.append(clue);
  // No live GPS for a stolen artifact. Its present holder must be found in the world.
  const source=w.landmarks.find(l=>l.item===r.item)||(origin?{name:origin.name,x:origin.x*TILE,y:origin.y*TILE}:null);if(source){const b=el('button',origin?'Запомнить место последней вести':'Запомнить место поиска');b.onclick=()=>{select({name:source.name,x:source.x,y:source.y});close();};d.append(b);}
  list.append(d);

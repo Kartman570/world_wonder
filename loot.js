@@ -1,6 +1,7 @@
+export const CORPSE_REACH=120;
 // Keep source inventories separate; the player only receives things actually present.
 export function nearbyLootSources(world,anchor=null,p=world.player){
- const groups=[['corpse',world.corpses||[],75],['woodPile',world.woodPiles||[],80],['landmark',world.landmarks||[],90]],sources=[];
+ const groups=[['corpse',world.corpses||[],CORPSE_REACH],['woodPile',world.woodPiles||[],80],['landmark',world.landmarks||[],90]],sources=[];
  for(const [kind,list,radius]of groups)for(const obj of list){if(!world.canInteract(p,obj,radius))continue;const hasItems=Object.values(obj.inventory||{}).some(n=>n>0),needsButchering=kind==='corpse'&&obj.animal&&!obj.butchered;if(!hasItems&&!needsButchering&&obj!==anchor)continue;sources.push({kind,obj,radius,needsButchering,distance:Math.hypot(p.x-obj.x,p.y-obj.y)});}
  return sources.sort((a,b)=>a.distance-b.distance||String(a.obj.id).localeCompare(String(b.obj.id)));
 }

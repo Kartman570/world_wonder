@@ -1,0 +1,11 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><title>Проверка полевых механик</title><link rel="stylesheet" href="style.css"><body style="overflow:auto;background:#182a24;color:#ded4b3;padding:40px"><main style="max-width:850px;margin:auto"><div class="eyebrow">ЛАБОРАТОРИЯ АЛЬФЫ 10</div><h1>Полевые механики</h1><p>Отдельные проверочные сохранения. Основное путешествие не меняется. Кнопка создаёт сценарий; на стартовом экране игры выберите «Продолжить сохранённое путешествие».</p><div id="scenes" class="actions"></div></main><script type="module">
+import {World,TILE} from './simulation.js';
+import {Expedition} from './expedition.js';
+const scenarios={
+ stable:{label:'Конюшня · покупка и верховая езда',prepare(w){const g=w.entities.find(e=>e.role==='groom');w.player.x=g.x;w.player.y=g.y+35;w.player.inventory.gold=500;}},
+ stock:{label:'Новая жизнь · оружие в соборе',prepare(w){w.player.hp=0;w.die(w.player);w.deathReport.acknowledged=true;Object.assign(w.player,{x:w.trainingRack.x,y:w.trainingRack.y});}},
+ webs:{label:'Шёлковый путь · паутина и пауки',prepare(w){const z=w.places.find(z=>z.id==='silk-road');w.player.x=(z.x+.5)*TILE;w.player.y=(z.y+9.5)*TILE;w.player.inventory.medicine=3;w.player.inventory.sword=1;}},
+ alert:{label:'Дальняя стрела · передача тревоги',prepare(w){const z=w.loreGeography.desert,p=w.player;p.x=(z.x-140)*TILE;p.y=(z.y+30)*TILE;w.entities=w.entities.filter(e=>Math.hypot(e.x-p.x,e.y-p.y)>3500);for(let i=0;i<4;i++){const e=w.safeSpawn(i%2?'banditArcher':'bandit','red',p.x/TILE+10+i*3,p.y/TILE+(i%2)*3,'Разбойник из проверочного отряда');e.home={x:e.x,y:e.y};}p.inventory.arrow=90;p.inventory.bow=1;p.weaponMode='ranged';p.equipment.ranged='bow';}}
+};
+for(const [id,scene]of Object.entries(scenarios)){const b=document.createElement('button');b.textContent=scene.label;b.onclick=()=>{const w=new World('field-ui-'+id);scene.prepare(w);w.rebuildSpatial();w.resetMotion();const slot='qa-field-'+id;localStorage.setItem('ashen-road-save:'+slot,new Expedition(w).save());location.href='./?slot='+slot;};document.querySelector('#scenes').append(b);}
+</script></body></html>

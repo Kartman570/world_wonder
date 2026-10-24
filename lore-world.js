@@ -49,7 +49,7 @@ export function buildLoreLands(w,r){
  w.loreGeography.chapelBuilding=w.buildings.length;
  // Desert households differ from human streets; these are movable tents around blue fires.
  for(const z of [camp,other]){flat(z.x,z.y,15,15);for(let i=0;i<6;i++)w.buildings.push({x:z.x+Math.round(Math.cos(i*Math.PI/3)*12)-2,y:z.y+Math.round(Math.sin(i*Math.PI/3)*10)-2,w:4,h:4,type:'loreTent',loreStyle:i%2?'striped':'hide'});}
- for(let i=0;i<14;i++){const angle=i*2.39996,rad=13+Math.floor(i/5)*12,x=ark.x+Math.round(Math.cos(angle)*rad),y=ark.y+Math.round(Math.sin(angle)*rad*.78);if(Math.abs(x-ark.x)<5&&y>ark.y)continue;w.buildings.push({x:x-3,y:y-3,w:7,h:7,type:'arkVault',fullRoom:true,name:i%3?'ТИХОЕ УБЕЖИЩЕ':'КРУГЛАЯ МАСТЕРСКАЯ',lore:true});}
+ for(let i=0;i<14;i++){const angle=i*2.39996,rad=13+Math.floor(i/5)*12;let x=ark.x+Math.round(Math.cos(angle)*rad),y=ark.y+Math.round(Math.sin(angle)*rad*.78);if(Math.abs(x-ark.x)<5&&y>ark.y)continue;const clear=(xx,yy)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++)if(w.roadMask[(yy+dy)*W+xx+dx]||[2,4,17].includes(w.tile(xx+dx,yy+dy)))return false;return true;};if(!clear(x,y)){let found=false;for(let r=7;r<45&&!found;r+=7)for(let a=0;a<12;a++){const xx=x+Math.round(Math.cos(a*Math.PI/6)*r),yy=y+Math.round(Math.sin(a*Math.PI/6)*r);if(clear(xx,yy)){x=xx;y=yy;found=true;break;}}}w.buildings.push({x:x-3,y:y-3,w:7,h:7,type:'arkVault',fullRoom:true,name:i%3?'ТИХОЕ УБЕЖИЩЕ':'КРУГЛАЯ МАСТЕРСКАЯ',lore:true});}
 
  // All unstable tears have their own bounded drift patch, independent of the camera.
  for(const [i,[x,y]]of [[reach.x+7,reach.y+5],[855,480],[350,715],[1190,845],[desert.x+40,desert.y-85]].entries()){

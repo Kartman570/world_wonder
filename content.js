@@ -35,3 +35,5 @@ Object.assign(ROLES,LORE_ROLES);
 RANGED.push('nomadArcher');
 
 Object.assign(FACTIONS,{emralaan:'Эмралаандские кочевья',fairies:'Крылатые',arktaria:'Новая Арктария',chapel:'Безгласная часовня'});
+
+Object.assign(ROLES,{groom:'Конюх',horse:'Конь'});
