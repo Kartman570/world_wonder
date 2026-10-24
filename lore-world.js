@@ -1,3 +1,5 @@
+import {alienWorkerAI} from './alien-ecology.js';
+import {AIR_GRACE,AIR_DAMAGE} from './atmosphere.js';
 import {W,H,TILE,point} from './content.js';
 import {OBSERVATIONS} from './lore-content.js';
 const D=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -49,7 +51,7 @@ export function buildLoreLands(w,r){
  w.loreGeography.chapelBuilding=w.buildings.length;
  // Desert households differ from human streets; these are movable tents around blue fires.
  for(const z of [camp,other]){flat(z.x,z.y,15,15);for(let i=0;i<6;i++)w.buildings.push({x:z.x+Math.round(Math.cos(i*Math.PI/3)*12)-2,y:z.y+Math.round(Math.sin(i*Math.PI/3)*10)-2,w:4,h:4,type:'loreTent',loreStyle:i%2?'striped':'hide'});}
- for(let i=0;i<14;i++){const angle=i*2.39996,rad=13+Math.floor(i/5)*12;let x=ark.x+Math.round(Math.cos(angle)*rad),y=ark.y+Math.round(Math.sin(angle)*rad*.78);if(Math.abs(x-ark.x)<5&&y>ark.y)continue;const clear=(xx,yy)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++)if(w.roadMask[(yy+dy)*W+xx+dx]||[2,4,17].includes(w.tile(xx+dx,yy+dy)))return false;return true;};if(!clear(x,y)){let found=false;for(let r=7;r<45&&!found;r+=7)for(let a=0;a<12;a++){const xx=x+Math.round(Math.cos(a*Math.PI/6)*r),yy=y+Math.round(Math.sin(a*Math.PI/6)*r);if(clear(xx,yy)){x=xx;y=yy;found=true;break;}}}w.buildings.push({x:x-3,y:y-3,w:7,h:7,type:'arkVault',fullRoom:true,name:i%3?'ТИХОЕ УБЕЖИЩЕ':'КРУГЛАЯ МАСТЕРСКАЯ',lore:true});}
+ for(let i=0;i<14;i++){const angle=i*2.39996,rad=13+Math.floor(i/5)*12;let x=ark.x+Math.round(Math.cos(angle)*rad),y=ark.y+Math.round(Math.sin(angle)*rad*.78);if(Math.abs(x-ark.x)<5&&y>ark.y)continue;const clear=(xx,yy)=>{if(w.buildings.some(b=>xx+6>b.x&&xx-6<b.x+b.w&&yy+6>b.y&&yy-6<b.y+b.h))return false;for(let dy=-6;dy<=6;dy++)for(let dx=-6;dx<=6;dx++)if(w.roadMask[(yy+dy)*W+xx+dx]||[2,4,17].includes(w.tile(xx+dx,yy+dy)))return false;return true;};if(!clear(x,y)){let found=false;for(let r=7;r<70&&!found;r+=7)for(let a=0;a<12;a++){const xx=x+Math.round(Math.cos(a*Math.PI/6)*r),yy=y+Math.round(Math.sin(a*Math.PI/6)*r);if(clear(xx,yy)){x=xx;y=yy;found=true;break;}}}w.buildings.push({x:x-5,y:y-5,w:11,h:11,type:'arkVault',fullRoom:true,name:i%3?'ТИХОЕ УБЕЖИЩЕ':'КРУГЛАЯ МАСТЕРСКАЯ',lore:true});}
 
  // All unstable tears have their own bounded drift patch, independent of the camera.
  for(const [i,[x,y]]of [[reach.x+7,reach.y+5],[855,480],[350,715],[1190,845],[desert.x+40,desert.y-85]].entries()){
@@ -86,7 +88,7 @@ export function acceptBreathSuit(w,e){if(e?.role!=='arctRescuer'||!w.canInteract
 export function loreHostility(w,a,b){if(!a.loreActor&&!b.loreActor)return null;if(b.faction==='emralaan'&&['guard','archer','escort','escortArcher','hunter'].includes(a.role))return true;if(a.faction==='emralaan')return b===w.player||['oak','salt','north','red','ash','thorn'].includes(b.faction);if(a.race==='arctarian')return false;if(a.role==='fairy')return false;if(a.role==='relicKeeper')return a.aggressor===b.id||b===w.player&&w.player.weaponDrawn&&D(a,b)<210;return null;}
 export function loreAI(w,e,dt){if(!e.loreActor)return false;
  if(e.role==='relicKeeper'){if(D(e,e.work)>20)w.navigate(e,e.work,dt,70);else e.state='watchingRelic';return true;}
- if(e.race==='arctarian'){if(e.aggressor){const a=e.aggressor==='player'?w.player:w.entityById.get(e.aggressor);if(a&&D(a,e)<240){w.move(e,e.x+(e.x-a.x)*2,e.y+(e.y-a.y)*2,100,dt);e.state='flee';return true;}}
+ if(e.race==='arctarian'){if(alienWorkerAI(w,e,dt))return true;if(e.aggressor){const a=e.aggressor==='player'?w.player:w.entityById.get(e.aggressor);if(a&&D(a,e)<240){w.move(e,e.x+(e.x-a.x)*2,e.y+(e.y-a.y)*2,100,dt);e.state='flee';return true;}}
   if(e.role==='arctRescuer'&&e.inventory.breathSuit<2&&e.inventory.cloth>=2&&e.inventory.ore>=2){e.shellWork=(e.shellWork||0)+dt;if(e.shellWork>=30){e.shellWork=0;e.inventory.cloth-=2;e.inventory.ore-=2;e.inventory.breathSuit++;}}e.state=e.role==='arctRescuer'?'offeringShell':'quietWork';if(D(e,e.home)>60)w.move(e,e.home.x,e.home.y,75,dt);return true;}
  if(e.role==='fairy'){const threat=w.nearby(e,210).find(o=>o===w.player&&o.weaponDrawn||o.enemyId&&o.faction!=='emralaan');if(threat){w.move(e,e.x+(e.x-threat.x)*2,e.y+(e.y-threat.y)*2,110,dt);e.state='flee';return true;}const rider=w.nearby(e,240).find(o=>o.mounted&&(o.hp<o.maxHp&&e.inventory.cloth>0||o.role==='nomadArcher'&&o.inventory.arrow<15&&e.inventory.arrow>0));if(rider){if(D(e,rider)>48)w.move(e,rider.x,rider.y,80,dt);else{e.serviceWork=(e.serviceWork||0)+dt;if(e.serviceWork>=4){e.serviceWork=0;if(rider.hp<rider.maxHp&&e.inventory.cloth>0){e.inventory.cloth--;rider.hp=Math.min(rider.maxHp,rider.hp+15);}else{const n=Math.min(10,e.inventory.arrow);e.inventory.arrow-=n;rider.inventory.arrow+=n;}}}e.state='tendingRider';return true;}e.state='byBlueFire';}
  if(!e.patrolPoint||e.timer<=0){e.patrolPoint={x:e.home.x+(w.random()-.5)*(e.mounted?900:180),y:e.home.y+(w.random()-.5)*(e.mounted?750:180)};e.timer=10+w.random()*15;}
@@ -105,6 +107,7 @@ export function updateLore(w,dt){
  if(!supported(w)||!w.loreState)return;
  for(const r of w.rifts){const t=w.elapsed*.11+r.phase;r.x=r.anchor.x+Math.sin(t)*r.drift;r.y=r.anchor.y+Math.sin(t*.73)*r.drift*.65;}
  const p=w.player;if(p.role==='absent')return;const helper=w.entities.find(e=>e.role==='arctRescuer'&&e.hp>0);if(helper&&!(p.inventory.breathSuit>0)&&w.canInteract(p,helper,150)){const gift=acceptBreathSuit(w,helper);if(gift.ok)w.log(gift.message);}
- if(!canBreathe(w)){w.loreState.exposure+=dt;if(w.loreState.exposure>1){p.hp=Math.max(0,p.hp-18*dt);if(!w.loreState.airWarning||w.elapsed>w.loreState.airWarning+8){w.log('Фиолетовая густота забивает дыхание. Вернитесь на уступ или наденьте закрытое одеяние.');w.loreState.airWarning=w.elapsed;}if(p.hp<=0){w.die(p,{name:'Фиолетовое дыхание чаши',role:'atmosphere',deathReason:'Спустился под фиолетовую черту без закрытого одеяния.'});return;}}}else w.loreState.exposure=0;
+ if(!canBreathe(w)){const old=w.loreState.exposure||0;w.loreState.exposure=old+dt;if(!w.loreState.airWarning||w.elapsed>w.loreState.airWarning+8){w.log('Нечем дышать! Покиньте фиолетовый воздух или наденьте закрытое одеяние.');w.loreState.airWarning=w.elapsed||.001;}const hurt=Math.max(0,w.loreState.exposure-AIR_GRACE)-Math.max(0,old-AIR_GRACE);p.hp=Math.max(0,p.hp-AIR_DAMAGE*hurt);if(p.hp<=0){w.die(p,{name:'Фиолетовое дыхание чаши',role:'atmosphere',deathReason:'Спустился под фиолетовую черту без закрытого одеяния.'});return;}}else w.loreState.exposure=0;
+
  for(const r of w.rifts)if(D(r,p)<r.radius+12){crossRift(w,r);break;}
 }

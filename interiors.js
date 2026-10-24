@@ -1,3 +1,4 @@
+import {drawAlienProp} from './alien-render.js';
 import {drawIndustryProp} from './adventure-render.js';
 // Rooms occupy the same world coordinates as their exterior; no level switch or teleport.
 import {TILE,point} from './content.js';
@@ -11,7 +12,7 @@ export function prepareRooms(buildings){
   b.workSpot=point(b.x+b.w/2+.5,b.y+2.5);
   b.furniture=[];const add=(kind,x,y,w=1,h=1,solid=true)=>b.furniture.push({kind,x:b.x+x,y:b.y+y,w,h,solid});
   if(b.type==='stable'){add('rack',1,1,2,1);add('barrels',6,1);add('crates',1,4);b.workSpot=point(b.x+4.5,b.y+2.5);}
-  if(b.type==='arkVault'){add('table',1,1,2,1);add('crates',4,1);add('shelf',1,4,1,1);}
+  if(b.type==='arkVault'){add('arkNest',2,3,2,2);add('arkVessel',6,2,1,1);add('arkResonator',7,5,1,1);b.workSpot=point(b.x+b.w/2,b.y+b.h/2);}
   if(b.type==='cathedral')continue;
   if(b.type==='townhall'){add('table',2,2,2,1);add('shelf',1,1,2,1);}
   if(b.type==='barracks'){for(let j=1;j<b.w-2;j+=3)add('bed',j,1);add('rack',1,4);add('table',4,4,2,1);}
@@ -28,7 +29,10 @@ export function prepareRooms(buildings){
  }
 }
 export function roomName(b){return b.name||({house:'Жилой дом',smith:'Кузница',inn:'Трактир',warehouse:'Городской склад',apothecary:'Травная лавка',castle:'Замок',cathedral:'Собор'})[b.type];}
+export function arkRoomCell(b,x,y){const cx=b.x+b.w/2,cy=b.y+b.h/2,rx=b.w/2,ry=b.h/2,q=((x+.5-cx)/rx)**2+((y+.5-cy)/ry)**2;if(q>1)return 'outside';if(x===b.door.x&&y>=Math.floor(cy))return 'floor';return ((x+.5-cx)/(rx-1))**2+((y+.5-cy)/(ry-1))**2<1?'floor':'wall';}
 export function drawInterior(c,b,night=false){
+ if(b.type==='arkVault'){const x=(b.x+b.w/2)*TILE,y=(b.y+b.h/2)*TILE,rx=b.w*TILE/2,ry=b.h*TILE/2;c.fillStyle='#424456';c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();c.fillStyle='#8a8b9e';c.beginPath();c.ellipse(x,y,rx-TILE*.7,ry-TILE*.7,0,0,Math.PI*2);c.fill();for(let i=1;i<5;i++){c.strokeStyle='#b2c2bd44';c.lineWidth=2;c.beginPath();c.ellipse(x,y,(rx-TILE)*i/5,(ry-TILE)*i/5,0,0,Math.PI*2);c.stroke();}c.fillStyle='#acb9ae';c.fillRect(b.door.x*TILE,b.door.y*TILE,TILE,TILE);for(const f of b.furniture)drawFurnishing(c,f);return;}
+
  const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;
  c.fillStyle='#29392f';c.fillRect(x-3,y-3,w+6,h+6);
  c.fillStyle=['castle','wizardHall'].includes(b.type)?'#8a8c77':'#9b8766';c.fillRect(x,y,w,h);
@@ -52,7 +56,7 @@ export function drawDoor(c,b){
  c.fillStyle='#d9bd78';c.beginPath();c.arc(x+15,y-24,2.5,0,7);c.fill();
 }
 
-export function drawFurnishing(c,f){if(drawIndustryProp(c,f))return;if(drawWorkProp(c,f))return;const fx=f.x*TILE,fy=f.y*TILE,fw=f.w*TILE,fh=f.h*TILE;
+export function drawFurnishing(c,f){if(drawAlienProp(c,f))return;if(drawIndustryProp(c,f))return;if(drawWorkProp(c,f))return;const fx=f.x*TILE,fy=f.y*TILE,fw=f.w*TILE,fh=f.h*TILE;
   c.fillStyle='#24332c50';c.fillRect(fx+7,fy+10,fw-4,fh-4);
   c.fillStyle=['forge','hearth','anvil'].includes(f.kind)?'#505951':'#715438';c.fillRect(fx+5,fy+5,fw-10,fh-10);
   c.strokeStyle='#bca175';c.strokeRect(fx+5,fy+5,fw-10,fh-10);

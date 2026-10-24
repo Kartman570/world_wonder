@@ -8,6 +8,7 @@ export function resolveInteraction(world,p=world.player){
  if(world.trainingRack&&world.canInteract(p,world.trainingRack,115))add('trainingStock',world.trainingRack,'Учебное оружие · получить комплект',-1);
  for(const horse of world.entities.filter(e=>e.role==='horse'&&e.hp>0))if(!horse.horse.rider&&world.canInteract(p,horse,145))add('horse',horse,horse.name+' · поводья',0);
  for(const z of world.cities||[]){const board={city:z.id,x:(z.x+4.5)*TILE,y:(z.y+4.5)*TILE};if(world.canInteract(p,board,90))add('contractBoard',board,'Доска поручений · прочитать',-1);}
+ for(const site of world.alienEcology?.sites||[])if(world.canInteract(p,site,120))add('alienSite',site,site.name+' · осмотреть',1);
  for(const site of world.loreSites||[])if(world.canInteract(p,site,120))add('loreSite',site,site.title+' · осмотреть',1);
  for(const camp of world.camps||[])if(world.canInteract(p,camp,100))add('camp',camp,'Походный лагерь · отдых и сундук',1);
  if(world.detention){const guard=world.entityById.get(world.detention.guard);if(guard&&world.canInteract(p,guard,110))add('arrest',guard,'Стража · обсудить задержание',-4);}
@@ -27,6 +28,6 @@ export function resolveInteraction(world,p=world.player){
 }
 export function beginGather(world,target){
  if(target?.kind!=='resource'||!target.obj||!(target.obj.amount>0)||!world.canInteract(world.player,target.obj,60))return false;
- world.player.action={type:'resource',id:target.obj.id,remaining:target.obj.kind==='ore'?4:2};return true;
+ world.startAction({type:'resource',id:target.obj.id,remaining:target.obj.kind==='ore'?4:2});return true;
 }
 export function hoveredNpc(world,point,zoom=1){let selected=null,best=Infinity;for(const e of world.entities){if(e.hp<=0)continue;const pose=world.renderPose(e);if(!world.visibleFrom(world.player,pose))continue;const animal=ANIMALS[e.role],height=e.race==='arctarian'?114:e.mounted?105:e.role==='wizard'?100:animal?['deer','elk'].includes(e.role)?90:55:80;const dx=Math.abs(point.x-pose.x),dy=Math.abs(point.y-(pose.y-height/2));if(dx>(animal?Math.max(22,animal.size*1.5):e.horse||e.mounted?45:22)/zoom||dy>(height/2+4)/zoom)continue;const score=dx*dx+dy*dy;if(score<best){best=score;selected=e;}}return selected;}
