@@ -6,12 +6,13 @@ export function placeDungeonEntrances(w,r){
   const kind=kinds[i];let location;
   for(let attempt=0;attempt<8000;attempt++){
    let x,y;
-   if(kind==='underwater'){const l=w.lakes[Math.floor(r()*w.lakes.length)],angle=r()*Math.PI*2,rad=r()*.6;x=Math.floor(l.x+Math.cos(angle)*l.rx*rad);y=Math.floor(l.y+Math.sin(angle)*l.ry*rad);}
+   if(kind==='underwater'&&w.generatorVersion>=12&&!w.lakes.length){if(!w.riverPaths?.length)break;const river=w.riverPaths[Math.floor(r()*w.riverPaths.length)],p=river.points[Math.floor(r()*river.points.length)];x=Math.round(p[0]);y=Math.round(p[1]);}
+   else if(kind==='underwater'){const l=w.lakes[Math.floor(r()*w.lakes.length)],angle=r()*Math.PI*2,rad=r()*.6;x=Math.floor(l.x+Math.cos(angle)*l.rx*rad);y=Math.floor(l.y+Math.sin(angle)*l.ry*rad);}
    else if(kind==='road'){const road=w.roads[Math.floor(r()*w.roads.length)],index=Math.floor(r()*(road.length-1)),a=road[index],b=road[index+1],t=r();x=Math.round(a[0]+(b[0]-a[0])*t+(r()<.5?-7:7));y=Math.round(a[1]+(b[1]-a[1])*t+(r()<.5?-6:6));}
    else {x=15+Math.floor(r()*(W-30));y=15+Math.floor(r()*(H-30));}
    if(x<8||y<8||x>W-8||y>H-8)continue;const tile=w.tile(x,y);
    if(w.cities.some(z=>Math.hypot(z.x-x,z.y-y)<z.r+40)||Math.hypot(x-(w.generatorVersion>=3?w.places.find(z=>z.id==='cathedral').x:300),y-(w.generatorVersion>=3?w.places.find(z=>z.id==='cathedral').y:298))<40||w.dungeonEntrances.some(d=>Math.hypot(d.x/TILE-x,d.y/TILE-y)<24)||w.blocked((x+.5)*TILE,(y+.5)*TILE,true))continue;
-   if(kind==='underwater'?tile!==2:tile===2||tile===4)continue;
+   if(kind==='underwater'?(w.generatorVersion>=12?![2,4].includes(tile):tile!==2):tile===2||tile===4)continue;
    if(kind==='forest'&&w.depth[y*W+x]<9)continue;
    location=point(x+.5,y+.5);break;
   }

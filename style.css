@@ -41,3 +41,5 @@ header .location{display:block;border-left:0;padding-left:0;flex:1;min-width:0;f
 .conversation-body>button{padding:10px 13px;margin:6px 8px 0 0;font-size:11px}.conversation-actions button:focus-visible,.compact-choice summary:focus-visible{outline:1px solid var(--gold);outline-offset:2px}
 
 .item-description{display:block;max-width:48em;margin-top:6px;font:12px/1.6 Manrope,system-ui;color:var(--muted,#a9b3a3)}
+
+.city-map-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:140px;overflow:auto;padding:3px}.city-map-legend button{text-align:left;padding:8px 10px;font-size:12px;min-width:0}.city-map-legend button.selected{border-color:#dcc18a;background:#56604a}@media(max-width:520px){.city-map-legend{grid-template-columns:1fr;max-height:160px}}

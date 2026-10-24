@@ -5,3 +5,16 @@ node_modules/
 .env.*
 !.env.example
 lore_docs/
+# Blender/Python working files
+__pycache__/
+*.pyc
+*.blend
+*.blend1
+*.blend2
+
+# Sprite folders contain PNGs; production metadata lives in the root manifest only.
+/graphics/sprites/**
+!/graphics/sprites/**/
+!/graphics/sprites/**/*.png
+!/graphics/sprites/manifest.json
+!/graphics/sprites/README.md

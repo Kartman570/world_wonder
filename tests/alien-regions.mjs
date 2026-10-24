@@ -4,7 +4,7 @@ import {arkRadius,desertAt,purpleAt} from '../lore-world.js';
 import {createHash} from 'node:crypto';
 const hash=x=>createHash('sha256').update(x).digest('hex'),angles=new Set();
 for(let n=0;n<20;n++){
- const w=new World(n?'alien-region-'+n:'oak'),a=w.loreGeography.ark;
+ const w=new World(n?'alien-region-'+n:'oak',{generatorVersion:11}),a=w.loreGeography.ark;
  assert.equal(w.generatorVersion,11);assert.ok(Math.max(...Array.from({length:64},(_,i)=>arkRadius(a,i*Math.PI/32)))-Math.min(...Array.from({length:64},(_,i)=>arkRadius(a,i*Math.PI/32)))>.25);
  const gate=a.gate;assert.ok(!w.blocked(gate.x,gate.y),'dry pass');assert.ok(!purpleAt(w,gate),'suit giver outside atmosphere');
  const resident=w.entities.find(e=>e.role==='arctMiner');assert.ok(w.path(gate,resident).length,'pass reaches basin');

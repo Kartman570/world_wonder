@@ -14,7 +14,7 @@ export class PathPlanner{
   if(this.cache.has(key))return this.cache.get(key).map(p=>({...p}));
   if(++this.stamp>=0xffffffff){this.seen.fill(0);this.closed.fill(0);this.stamp=1;}const stamp=this.stamp,heap=new Heap();heap.push({k:origin,g:0,f:0});this.seen[origin]=stamp;this.cost[origin]=0;let found=false,steps=0;
   while(heap.a.length&&steps++<this.width*this.height){const n=heap.pop();if(this.closed[n.k]===stamp)continue;if(n.k===goal){found=true;break;}this.closed[n.k]=stamp;const x=n.k%w,y=Math.floor(n.k/w);
-   for(let dir=0;dir<4;dir++){const xx=x+(dir===0?1:dir===1?-1:0),yy=y+(dir===2?1:dir===3?-1:0),k=yy*w+xx;if(this.closed[k]===stamp||this.blocked(xx,yy))continue;const terrain=this.tiles[k],g=n.g+([1,3,5].includes(terrain)?1:2+Math.min(this.depth[k],18)*.05);if(this.seen[k]===stamp&&g>=this.cost[k]-.0001)continue;this.seen[k]=stamp;this.cost[k]=g;this.parents[k]=n.k;heap.push({k,g,f:g+Math.abs(xx-ex)+Math.abs(yy-ey)});}
+   for(let dir=0;dir<4;dir++){const xx=x+(dir===0?1:dir===1?-1:0),yy=y+(dir===2?1:dir===3?-1:0),k=yy*w+xx;if(this.closed[k]===stamp||this.blocked(xx,yy))continue;const terrain=this.tiles[k],g=n.g+([1,3,5].includes(terrain)?1:terrain===19?1.35:2+Math.min(this.depth[k],18)*.05);if(this.seen[k]===stamp&&g>=this.cost[k]-.0001)continue;this.seen[k]=stamp;this.cost[k]=g;this.parents[k]=n.k;heap.push({k,g,f:g+Math.abs(xx-ex)+Math.abs(yy-ey)});}
    if(steps%128===0)yield null;
   }
   if(!found)return [];const nodes=[];let k=goal;while(k!==origin){nodes.push({x:(k%w+.5)*t,y:(Math.floor(k/w)+.5)*t});k=this.parents[k];if(nodes.length>w*this.height)return [];}nodes.reverse();

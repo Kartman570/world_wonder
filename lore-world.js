@@ -1,3 +1,4 @@
+import {frontierContains} from './frontier-geography.js';
 import {alienWorkerAI} from './alien-ecology.js';
 import {AIR_GRACE,AIR_DAMAGE} from './atmosphere.js';
 import {W,H,TILE,point} from './content.js';
@@ -8,6 +9,7 @@ export function buildLoreLands(w,r){
  if(!supported(w))return;
  const jitter=n=>Math.round((r()-.5)*n),ark={x:1010+jitter(65),y:737+jitter(55),rx:125,ry:115},desert={x:1000+jitter(50),y:210+jitter(45),rx:250,ry:205};
  if(w.generatorVersion>=11){ark.phase=r()*Math.PI*2;ark.rotation=r()*Math.PI*2;w.arkAtmosphere=new Uint8Array(W*H);}
+ if(w.frontierRegions){Object.assign(ark,w.frontierRegions.ark);Object.assign(desert,w.frontierRegions.desert);}
  w.loreGeography={ark,desert};w.loreSites=[];w.rifts=[];
  const paint=(x,y,t)=>{if(w.generatorVersion>=10&&[2,4].includes(w.tile(x,y))&&!w.roadMask[y*W+x])return;if(x>1&&y>1&&x<W-2&&y<H-2)w.tiles[y*W+x]=w.roadMask[y*W+x]?(w.tiles[y*W+x]===5?5:1):t;};
  // Rivers and lakes remain natural: the new biomes change the banks, never erase water.
@@ -18,7 +20,7 @@ export function buildLoreLands(w,r){
   if(basin<1){if(basin>.66)paint(x,y,17);else if(basin<.40)paint(x,y,16);else paint(x,y,18);}
  }
  const flat=(x,y,radius,t=18)=>{for(let y1=-radius;y1<=radius;y1++)for(let x1=-radius;x1<=radius;x1++)paint(x+x1,y+y1,t);};
- const land=(id,name,x,y,rad=20,faction)=>{if(w.generatorVersion>=10&&(['emralaan','nomad-well','silent-chapel'].includes(id)||w.generatorVersion>=11&&id.startsWith('nomad-clan-'))){const dry=(xx,yy)=>{if(w.generatorVersion>=11&&(xx<20||yy<20||xx>W-21||yy>H-21))return false;for(let dy=-16;dy<=16;dy++)for(let dx=-16;dx<=16;dx++)if([2,4].includes(w.tile(xx+dx,yy+dy)))return false;return true;};if(!dry(x,y)){let found=false;for(let radius=8;radius<120&&!found;radius+=8)for(let k=0;k<24;k++){const xx=x+Math.round(Math.cos(k*Math.PI/12)*radius),yy=y+Math.round(Math.sin(k*Math.PI/12)*radius);if(dry(xx,yy)){x=xx;y=yy;found=true;break;}}}}const z={id,name,x,y,r:rad,faction};w.places.push(z);return z;};
+ const land=(id,name,x,y,rad=20,faction)=>{if(w.generatorVersion>=12&&!['new-arktaria','ark-ledge','emralaan','nomad-well'].includes(id)&&!id.startsWith('nomad-clan-')){for(let i=0;i<8000;i++){const xx=35+Math.floor(r()*(W-70)),yy=35+Math.floor(r()*(H-70));if(frontierContains(w,xx,yy,rad+30)||w.places.some(z=>Math.hypot(z.x-xx,z.y-yy)<(z.r||20)+rad+35)||w.buildings.some(b=>xx>b.x-20&&xx<b.x+b.w+20&&yy>b.y-20&&yy<b.y+b.h+20))continue;let dry=true;for(let dy=-17;dy<=17;dy+=2)for(let dx=-17;dx<=17;dx+=2)if([2,4,17].includes(w.tile(xx+dx,yy+dy)))dry=false;if(dry){x=xx;y=yy;break;}}}if(w.generatorVersion>=10&&(['emralaan','nomad-well','silent-chapel'].includes(id)||w.generatorVersion>=11&&id.startsWith('nomad-clan-'))){const dry=(xx,yy)=>{if(w.generatorVersion>=11&&(xx<20||yy<20||xx>W-21||yy>H-21))return false;for(let dy=-16;dy<=16;dy++)for(let dx=-16;dx<=16;dx++)if([2,4].includes(w.tile(xx+dx,yy+dy)))return false;return true;};if(!dry(x,y)){let found=false;for(let radius=8;radius<120&&!found;radius+=8)for(let k=0;k<24;k++){const xx=x+Math.round(Math.cos(k*Math.PI/12)*radius),yy=y+Math.round(Math.sin(k*Math.PI/12)*radius);if(dry(xx,yy)){x=xx;y=yy;found=true;break;}}}}const z={id,name,x,y,r:rad,faction};w.places.push(z);return z;};
  const camp=land('emralaan','Пустошь · Седло ветра',desert.x-20,desert.y,36,'emralaan');
  const other=land('nomad-well','Синие костры',desert.x+90,desert.y+65,24,'emralaan');
  land('new-arktaria','Новая Арктария',ark.x,ark.y,110,'arktaria');
@@ -41,7 +43,7 @@ export function buildLoreLands(w,r){
   Object.assign(ledge,{x:Math.round(ark.x+dx*.76),y:Math.round(ark.y+dy*.76)});ark.gate=point(ledge.x,ledge.y);ark.approach=[Math.round(ark.x+dx*1.16),Math.round(ark.y+dy*1.16)];
   for(let i=0;i<=100;i++){const t=.57+i/100*.64;flat(Math.round(ark.x+dx*t),Math.round(ark.y+dy*t),6,18);}
   for(let i=0;i<=150;i++){const t=i/150*1.24;for(let yy=-4;yy<=4;yy++)for(let xx=-4;xx<=4;xx++){const x=Math.round(ark.x+dx*t)+xx,y=Math.round(ark.y+dy*t)+yy,j=y*W+x;w.tiles[j]=[2,4,5].includes(w.tiles[j])?5:18;w.roadMask[j]=1;}}
-  w.paintRoad([near,ark.approach,[ledge.x,ledge.y]]);
+  w.allowArkRoad=true;try{w.paintRoad([near,ark.approach,[ledge.x,ledge.y]]);}finally{w.allowArkRoad=false;}
   const chapelNear=roadOutside.reduce((a,b)=>Math.hypot(b[0]-chapel.x,b[1]-chapel.y)<Math.hypot(a[0]-chapel.x,a[1]-chapel.y)?b:a);w.paintRoad([chapelNear,[chapel.x,chapel.y+13]]);
  }else{
   if(w.generatorVersion>=10)for(let y=ark.y+67;y<=ark.y+140;y++)for(let dx=-6;dx<=6;dx++)paint(ark.x+dx,y,18);
