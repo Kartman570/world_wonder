@@ -1,3 +1,5 @@
+let spriteFurniture=null;
+export function setFurnitureSprites(draw){spriteFurniture=draw;}
 import {drawAlienProp} from './alien-render.js';
 import {drawIndustryProp} from './adventure-render.js';
 // Rooms occupy the same world coordinates as their exterior; no level switch or teleport.
@@ -56,7 +58,7 @@ export function drawDoor(c,b){
  c.fillStyle='#d9bd78';c.beginPath();c.arc(x+15,y-24,2.5,0,7);c.fill();
 }
 
-export function drawFurnishing(c,f){if(drawAlienProp(c,f))return;if(drawIndustryProp(c,f))return;if(drawWorkProp(c,f))return;const fx=f.x*TILE,fy=f.y*TILE,fw=f.w*TILE,fh=f.h*TILE;
+export function drawFurnishing(c,f){if(spriteFurniture?.(c,f))return;if(drawAlienProp(c,f))return;if(drawIndustryProp(c,f))return;if(drawWorkProp(c,f))return;const fx=f.x*TILE,fy=f.y*TILE,fw=f.w*TILE,fh=f.h*TILE;
   c.fillStyle='#24332c50';c.fillRect(fx+7,fy+10,fw-4,fh-4);
   c.fillStyle=['forge','hearth','anvil'].includes(f.kind)?'#505951':'#715438';c.fillRect(fx+5,fy+5,fw-10,fh-10);
   c.strokeStyle='#bca175';c.strokeRect(fx+5,fy+5,fw-10,fh-10);

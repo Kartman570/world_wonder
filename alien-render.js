@@ -1,6 +1,8 @@
+let spriteProps=null;
+export function setAlienPropSprites(draw){spriteProps=draw;}
 import {TILE} from './content.js';
 const oval=(c,x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
-export function drawAlienProp(c,f,time=0){if(!f.kind?.startsWith('ark'))return false;const x=(f.x+f.w/2)*TILE,y=(f.y+f.h/2)*TILE;
+export function drawAlienProp(c,f,time=0){if(!f.kind?.startsWith('ark'))return false;if(spriteProps?.(c,f,time))return true;const x=(f.x+f.w/2)*TILE,y=(f.y+f.h/2)*TILE;
  oval(c,x,y+14,35,16,'#192c3444');
  if(f.kind==='arkRock'){for(let i=0;i<Math.min(8,f.worked||0);i++)oval(c,x-50+i*13,y+27+i%2*9,6,3,'#b8b5c8');for(let i=0;i<4;i++){c.fillStyle=['#8d88a4','#777b93','#a4a6aa'][i%3];c.beginPath();c.moveTo(x-50+i*20,y+20);c.lineTo(x-36+i*20,y-40-i%2*25);c.lineTo(x-13+i*20,y+20);c.fill();}return true;}
  if(f.kind==='arkNest'){oval(c,x,y,70,49,'#626779');oval(c,x,y-8,57,39,'#a3b3aa');for(let i=-2;i<=2;i++)oval(c,x+i*17,y-8,6,26,'#8b8b9f');return true;}

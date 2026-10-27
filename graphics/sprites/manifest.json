@@ -4589,6 +4589,7 @@
     },
     {
       "id": "player",
+      "attachments": {"seat": [0.5, 0.56]},
       "name": "Странник — игрок",
       "type": "character",
       "directions": 8,
@@ -4764,6 +4765,7 @@
     },
     {
       "id": "horse",
+      "attachments": {"saddle": [0.5, 0.43]},
       "name": "Верховой конь",
       "type": "character",
       "directions": 8,

@@ -2,13 +2,13 @@ import {paceInCell} from './idle-activity.js';
 import {TILE,W,point,GUARDS,BANDITS,ITEMS} from './content.js';
 import {combatAI} from './combat.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-export const CRIMES={weapon:{name:'Ношение обнажённого оружия',duration:60,reputation:5},assault:{name:'Нападение',duration:1440,reputation:20},murder:{name:'Убийство',duration:10080,reputation:60},escape:{name:'Побег из тюрьмы',duration:10080,reputation:35}};
+export const CRIMES={theft:{name:'Кража коня',duration:1440,reputation:15},weapon:{name:'Ношение обнажённого оружия',duration:60,reputation:5},assault:{name:'Нападение',duration:1440,reputation:20},murder:{name:'Убийство',duration:10080,reputation:60},escape:{name:'Побег из тюрьмы',duration:10080,reputation:35}};
 export const prisonKey=city=>'jailKey_'+city;
 export function cityMemory(w,city){w.cityMemory??={};return w.cityMemory[city]??={reputation:0,weaponIncidents:0,history:[],active:null};}
 export function warrant(w,city){const memory=cityMemory(w,city),record=memory.active;if(record&&record.expires<=w.time){memory.active=null;return null;}return record;}
 export function recordCrime(w,city,kind){if(w.dungeonSpec||!w.cities.some(z=>z.id===city))return null;const m=cityMemory(w,city),old=warrant(w,city);if(old?.kind===kind&&kind!=='murder')return old;
  const rule=CRIMES[kind];if(kind==='weapon')m.weaponIncidents++;const entry={kind,name:rule.name,at:w.time,expires:w.time+rule.duration,status:'wanted',lastSeen:{x:w.player.x,y:w.player.y}};m.history.unshift(entry);m.history.length=Math.min(m.history.length,60);m.reputation=Math.max(-100,m.reputation-rule.reputation);
- const severity={weapon:1,assault:2,escape:3,murder:4};if(!old||severity[kind]>=severity[old.kind])m.active=entry;w.player.wanted=city;w.log(w.factionName(city)+': '+rule.name+'. Объявлен розыск.');return entry;
+ const severity={weapon:1,theft:2,assault:2,escape:3,murder:4};if(!old||severity[kind]>=severity[old.kind])m.active=entry;w.player.wanted=city;w.log(w.factionName(city)+': '+rule.name+'. Объявлен розыск.');return entry;
 }
 function resolve(w,city,status){const m=cityMemory(w,city);if(m.active)m.active.status=status;m.active=null;if(w.player.wanted===city)w.player.wanted=null;w.detention=null;for(const e of w.entities)if(e.faction===city&&GUARDS.includes(e.role)){e.enemyId=null;e.aggressor=null;e.retreatUntil=0;e.pendingStrike=null;}w.player.weaponWarnings=null;}
 export function sentence(w,city){const r=warrant(w,city),m=cityMemory(w,city);return !r?null:r.kind==='weapon'&&m.weaponIncidents===1?{kind:'fine',amount:35,crime:r.name}:{kind:'prison',crime:r.name};}

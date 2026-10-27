@@ -36,3 +36,7 @@ assert.equal(renderer.draw(c,b,false,'ground'),true);assert.equal(calls.length,1
 renderer.draw(c,b,false,'depth');assert.equal(calls.length,4);
 assert.equal(sheetGeometry({width:480,height:480},{directions:1,frameWidth:480,frameHeight:480}).frames,1);
 console.log('✓ Building modules: common coordinates, contour variants, cutaway, door states, lazy loading and atomic fallback');
+const roofBounds=renderer.bounds(b);
+assert.equal(renderer.visible(b,{left:roofBounds.left,right:roofBounds.right,top:roofBounds.top,bottom:b.y*TILE-1}),true,'roof visible before building footprint enters viewport');
+assert.equal(renderer.visible(b,{left:roofBounds.right+1,right:roofBounds.right+100,top:0,bottom:99999}),false);
+assert.doesNotThrow(()=>componentRect({...b,door:undefined},{origin:'door',rect:[0,0,1,1]}),'decorative tents have a default entrance origin');

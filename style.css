@@ -51,3 +51,9 @@ header .location{display:block;border-left:0;padding-left:0;flex:1;min-width:0;f
 @media(max-width:600px){.location-choice{flex-wrap:wrap;gap:3px}.location-distance{white-space:normal}.location-groups{max-height:30vh}.journal-focus{padding:13px 12px 2px}.journal-focus .actions{flex-direction:column}.journal-quest{margin-left:8px}.journal-quest>summary{gap:8px}.explore-journal{max-height:calc(88vh - 50px)}.explore-journal h1{font-size:30px}}
 @media(min-width:760px){.atlas-workspace:has(.location-catalog[open]){display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,1fr);gap:18px;align-items:start}.atlas-workspace:has(.location-catalog[open]) #bigmap{height:50vh;max-height:50vh;display:block}.atlas-workspace:has(.location-catalog[open]) .location-catalog{margin-top:0}.atlas-workspace:has(.location-catalog[open]) .location-groups{max-height:calc(50vh - 100px)}.atlas-workspace:has(.location-catalog[open]) .location-choice{padding:9px;flex-wrap:wrap;gap:3px}}
 @media(max-width:759px){.atlas-workspace:has(.location-catalog[open]) #bigmap{max-height:25vh}.atlas-workspace:has(.location-catalog[open]) .location-groups{max-height:25vh}}
+
+/* The welcome screen exists before any world, player, renderer or path worker. */
+body.main-menu{background:radial-gradient(ellipse at 50% 35%,#35483a 0%,#1b2d25 55%,#101c18 100%)}
+body.main-menu>header,body.main-menu>.quest-panel,body.main-menu>.map-panel,
+body.main-menu>.bottom,body.main-menu>#feed,body.main-menu>#prompt,
+body.main-menu>#performance,body.main-menu>#world{visibility:hidden}

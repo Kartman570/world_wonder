@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {thinTree,treeOverlapsClearing,clearForestLandmarks} from '../forest-clearings.js';
+import {World} from '../simulation.js';
+const count=50000,removed=Array.from({length:count},(_,i)=>thinTree('density-test',i)).filter(Boolean).length;
+assert.ok(removed/count>.095&&removed/count<.105,'density reduced by about ten percent');
+assert.equal(thinTree('same',25),thinTree('same',25));
+const targets=[{x:1000,y:1000},{x:2000,y:2000}];const trees=Array.from({length:1000},(_,id)=>({id,x:800+id%40*50,y:800+Math.floor(id/40)*60,s:1,wood:3}));
+const w={seed:'clearings',trees,landmarks:[targets[0]],dungeonEntrances:[targets[1]],alienFlora:[{x:1000,y:1000,s:1},{x:99999,y:99999,s:1}],treesNear(p,r){return trees.filter(t=>t.wood>0&&Math.hypot(t.x-p.x,t.y-p.y)<r);}};
+const original=trees.map(t=>({id:t.id,x:t.x,y:t.y}));clearForestLandmarks(w);
+assert.deepEqual(trees.map(({id,x,y})=>({id,x,y})),original,'positions, indices and IDs remain stable');
+for(const p of targets)assert.ok(!trees.some(t=>!t.hidden&&t.wood>0&&treeOverlapsClearing(t,p)),'canopies cannot cover a POI');
+assert.equal(w.alienFlora.length,1);const before=JSON.stringify(w);clearForestLandmarks(w);assert.equal(JSON.stringify(w),before,'idempotent on restore');
+const real=new World('forest-clearings-qa');
+for(const p of [...real.dungeonEntrances,...real.landmarks,...real.loreSites])assert.ok(!real.treesNear(p,950).some(t=>treeOverlapsClearing(t,p)),'generated POI remains visible');
+assert.ok(real.trees.every((t,i)=>t.id===i));
+console.log('✓ Deterministic ten-percent thinning, crown-aware POI clearings, stable tree IDs and generated dungeon/artifact visibility');

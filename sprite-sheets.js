@@ -4,7 +4,7 @@ export const DEFAULT_DIRECTION_MAP=[0,1,2,3,4,5,6,7];
 const modulo=(n,d)=>(n%d+d)%d;
 export function sheetGeometry(image,config={}){
  const width=image.naturalWidth||image.width,height=image.naturalHeight||image.height,frameWidth=config.frameWidth??width/SPRITE_DIRECTIONS,frameHeight=config.frameHeight??frameWidth;
- if(!Number.isInteger(frameWidth)||frameWidth<1||!Number.isInteger(frameHeight)||frameHeight<1||height%frameHeight||width!==frameWidth*(config.directions===1?1:8))throw new Error('Sprite sheet must have 8 equal columns and whole animation rows');
+ if(!Number.isInteger(frameWidth)||frameWidth<1||!Number.isInteger(frameHeight)||frameHeight<1||height%frameHeight||width!==frameWidth*(config.type==='static'||config.type==='dynamic'||config.directions===1?1:8))throw new Error('Sprite sheet must have 8 equal columns and whole animation rows');
  const rows=height/frameHeight,frames=config.frames??rows,scale=config.scale??.5,fps=config.fps??10,directions=DEFAULT_DIRECTION_MAP,anchor=config.anchor??[.5,190.077/256];
  if(!Number.isInteger(frames)||frames<1||frames!==rows||!Number.isFinite(scale)||scale<=0||!Number.isFinite(fps)||fps<=0)throw new Error('Invalid sprite frame count, scale or fps');
  if(directions.length!==8||new Set(directions).size!==8||directions.some(d=>!Number.isInteger(d)||d<0||d>7))throw new Error('Direction mapping must contain columns 0–7 exactly once');
@@ -57,7 +57,7 @@ async function loadImage(url){
 }
 export class SpriteSheets{
  constructor({manifestUrl=new URL('./graphics/sprites/manifest.json',import.meta.url),fetcher=globalThis.fetch,imageLoader=loadImage,warn=message=>console.warn(message),maxConcurrent=3,maxBytes=64*1024*1024,now=()=>performance.now()}={}){
-  this.maxConcurrent=Math.max(1,maxConcurrent);this.maxBytes=maxBytes;this.now=now;this.queue=[];this.active=0;this.resources=new Map();this.bytes=0;this.protected=new Set();this.lastPrepare=-Infinity;
+  this.maxConcurrent=Math.max(1,maxConcurrent);this.maxBytes=maxBytes;this.now=now;this.queue=[];this.active=0;this.resources=new Map();this.bytes=0;this.protected=new Set();this.pinned=new Set();this.lastPrepare=-Infinity;
   this.manifestUrl=new URL(manifestUrl,import.meta.url);this.imageLoader=imageLoader;this.warn=warn;this.assets=new Map();this.manifest={};this.motion=new WeakMap();
   this.ready=(async()=>{try{const response=await fetcher(this.manifestUrl,{cache:'no-store'});if(!response.ok)throw new Error('Sprite manifest HTTP '+response.status);const manifest=await response.json();if(!Array.isArray(manifest.catalog))throw new Error('Sprite manifest has no catalog');this.manifest=manifest;this.spriteIndex=indexSprites(manifest);return true;}catch(error){this.warn('PNG sprites unavailable; using procedural graphics. '+error.message);return false;}})();
  }
@@ -74,7 +74,7 @@ export class SpriteSheets{
   const time=this.now();
   for(const resource of [...this.resources.values()].sort((a,b)=>a.used-b.used)){
    if(this.bytes<=this.maxBytes)break;
-   if(!resource.image||time-resource.used<2000||[...resource.ids].some(id=>this.protected.has(id)))continue;
+   if(!resource.image||time-resource.used<2000||[...resource.ids].some(id=>(this.protected.has(id)||this.pinned.has(id))))continue;
    this.bytes-=resource.bytes;resource.image.close?.();resource.image=null;this.resources.delete(resource.url);
    for(const id of resource.ids)this.assets.delete(id);
   }
