@@ -1,3 +1,5 @@
+const catalogIndexes=new WeakMap();
+export function catalogEntry(manifest,id){let cached=catalogIndexes.get(manifest);const list=manifest.catalog||[];if(!cached||cached.list!==list||cached.length!==list.length){cached={list,length:list.length,index:new Map(list.map(e=>[e.id,e]))};catalogIndexes.set(manifest,cached);}return cached.index.get(id);}
 // Eight views are fixed; cell geometry, animation lengths and display size are data.
 export const SPRITE_DIRECTIONS=8;
 export const DEFAULT_DIRECTION_MAP=[0,1,2,3,4,5,6,7];
@@ -62,7 +64,7 @@ export class SpriteSheets{
   this.ready=(async()=>{try{const response=await fetcher(this.manifestUrl,{cache:'no-store'});if(!response.ok)throw new Error('Sprite manifest HTTP '+response.status);const manifest=await response.json();if(!Array.isArray(manifest.catalog))throw new Error('Sprite manifest has no catalog');this.manifest=manifest;this.spriteIndex=indexSprites(manifest);return true;}catch(error){this.warn('PNG sprites unavailable; using procedural graphics. '+error.message);return false;}})();
  }
  assetFor(e){return resolveSprite(this.manifest,e,this.spriteIndex);}
- configFor(id){if(typeof id!=='string')return null;const [owner,key]=id.split('#');const parent=this.manifest.catalog?.find(e=>e.id===owner);const entry=key?parent?.components?.[key]:parent;if(!entry?.spriteReady)return null;return {...entry,animations:Object.fromEntries(Object.entries(entry.animations||{}).filter(([,clip])=>clip.ready!==false))};}
+ configFor(id){if(typeof id!=='string')return null;const [owner,key]=id.split('#');const parent=catalogEntry(this.manifest,owner);const entry=key?parent?.components?.[key]:parent;if(!entry?.spriteReady)return null;return {...entry,animations:Object.fromEntries(Object.entries(entry.animations||{}).filter(([,clip])=>clip.ready!==false))};}
  // Only nearby models enter the queue. Visible draw requests can promote queued work.
  prepare(entities){
   const time=this.now();if(time-this.lastPrepare<250)return;this.lastPrepare=time;

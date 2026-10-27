@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "size": 512,
+  "materials": {
+    "grass": {
+      "files": [
+        "grass/grass_0.png",
+        "grass/grass_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 0,
+      "hashes": [
+        "0ca723af1aad27bf",
+        "9ec4fc73e5fb53f3"
+      ],
+      "source": "../3d/grass.blend"
+    },
+    "forest": {
+      "files": [
+        "forest/forest_0.png",
+        "forest/forest_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 1,
+      "hashes": [
+        "5224577d1d3b9143",
+        "c374fcabddd6dfc7"
+      ],
+      "source": "../3d/forest.blend"
+    },
+    "soil": {
+      "files": [
+        "soil/soil_0.png",
+        "soil/soil_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 2,
+      "hashes": [
+        "38f9fbbe45418d5c",
+        "ca17bb9452f2ee94"
+      ],
+      "source": "../3d/soil.blend"
+    },
+    "mud": {
+      "files": [
+        "mud/mud_0.png",
+        "mud/mud_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 3,
+      "hashes": [
+        "ef83db3cb208b348",
+        "d297f62584644a62"
+      ],
+      "source": "../3d/mud.blend"
+    },
+    "sand": {
+      "files": [
+        "sand/sand_0.png",
+        "sand/sand_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 4,
+      "hashes": [
+        "fef3344c0acf6d34",
+        "a077f8b065c88ad4"
+      ],
+      "source": "../3d/sand.blend"
+    },
+    "gravel": {
+      "files": [
+        "gravel/gravel_0.png",
+        "gravel/gravel_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 5,
+      "hashes": [
+        "22dfebd927322673",
+        "575e8fd8928bcec6"
+      ],
+      "source": "../3d/gravel.blend"
+    },
+    "paving": {
+      "files": [
+        "paving/paving_0.png",
+        "paving/paving_1.png"
+      ],
+      "worldPeriod": 192,
+      "priority": 6,
+      "hashes": [
+        "7dde93fa6d1ba33a",
+        "9262bd47ed123f94"
+      ],
+      "source": "../3d/paving.blend"
+    },
+    "cave": {
+      "files": [
+        "cave/cave_0.png",
+        "cave/cave_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 7,
+      "hashes": [
+        "752bcf84c7accb6e",
+        "d193da47435aeaf1"
+      ],
+      "source": "../3d/cave.blend"
+    },
+    "catacomb": {
+      "files": [
+        "catacomb/catacomb_0.png",
+        "catacomb/catacomb_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 8,
+      "hashes": [
+        "800f83bdb540bec4",
+        "1100a169ae6cf848"
+      ],
+      "source": "../3d/catacomb.blend"
+    },
+    "alien": {
+      "files": [
+        "alien/alien_0.png",
+        "alien/alien_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 9,
+      "hashes": [
+        "15459b1e1beee333",
+        "382bb3ac4303a542"
+      ],
+      "source": "../3d/alien.blend"
+    },
+    "snow": {
+      "files": [
+        "snow/snow_0.png",
+        "snow/snow_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 10,
+      "hashes": [
+        "7921b9ded0aede93",
+        "aef767534edb60e0"
+      ],
+      "source": "../3d/snow.blend"
+    },
+    "water": {
+      "files": [
+        "water/water_0.png",
+        "water/water_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 11,
+      "hashes": [
+        "3de57a156a0b01e2",
+        "b9c3a89280767ab1"
+      ],
+      "source": "../3d/water.blend"
+    },
+    "boards": {
+      "files": [
+        "boards/boards_0.png",
+        "boards/boards_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 12,
+      "hashes": [
+        "294f4eea19add796",
+        "b6b0d64d6578567b"
+      ],
+      "source": "../3d/boards.blend"
+    },
+    "dry_grass": {
+      "files": [
+        "dry_grass/dry_grass_0.png",
+        "dry_grass/dry_grass_1.png"
+      ],
+      "worldPeriod": 384,
+      "priority": 13,
+      "hashes": [
+        "84a62bf494172a31",
+        "809475b520abc5ed"
+      ],
+      "source": "../3d/dry_grass.blend"
+    }
+  },
+  "generator": "../3d/build_terrain.py",
+  "renderer": "Blender Cycles, orthographic top-down, periodic materials and wrapped geometry"
+}
