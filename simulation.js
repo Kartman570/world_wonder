@@ -1,3 +1,4 @@
+import {updateIdleFacing,holdConversation} from './idle-activity.js';
 import {generateAlienFlora} from './alien-flora.js';
 import {initializeAlienEcology,updateAlienEcology} from './alien-ecology.js';
 import {initializeGuardians,auditGuardians,guardianAI} from './quest-guardians.js';
@@ -215,7 +216,7 @@ export class World{
 
  die(e,killer){
   if(e===this.player){cancelCraft(this);if(prisonDefeat(this))return;mortalDeath(this,killer);return;}
-  const c={id:++this.id,x:e.x,y:e.y,name:e.name,inventory:{...e.inventory},animal:ANIMALS[e.role]?e.role:null,butchered:false,age:0,sourceId:e.id,...(e.relicGuardian?{questGuardian:{item:e.relicGuardian.item,place:e.relicGuardian.place}}:{})};e.inventory={};this.corpses.push(c);
+  const c={id:++this.id,x:e.x,y:e.y,name:e.name,inventory:{...e.inventory},animal:ANIMALS[e.role]?e.role:null,butchered:false,age:0,sourceId:e.id,sprite:e.sprite,role:e.role,race:e.race,dir:e.dir,deathAt:this.elapsed,...(e.relicGuardian?{questGuardian:{item:e.relicGuardian.item,place:e.relicGuardian.place}}:{})};e.inventory={};this.corpses.push(c);
   if(e.caravan){this.caravanStats.lost++;this.log(e.name+' разграблен на пути в '+this.factionName(e.destination)+'.',{at:e});for(const q of this.quests)if(q.type==='escort'&&q.caravan===e.id&&q.status==='active'){q.status='failed';this.log('Задание провалено: '+q.title);}}
   if(killer===this.player){if(BANDITS.includes(e.role))this.kills++;this.killCounts[e.role]=(this.killCounts[e.role]||0)+1;if(!this.discovery.includes(e.role))this.discovery.push(e.role);this.log(e.name+' повержен.');}
  }
@@ -247,7 +248,7 @@ export class World{
  }
  updateProjectiles(dt){for(const a of this.projectiles){const steps=Math.max(1,Math.ceil(dt*620/8));for(let i=0;i<steps&&a.life>0;i++){a.x+=a.vx*dt/steps;a.y+=a.vy*dt/steps;a.life-=dt/steps;if(a.x<0||a.y<0||a.x>=W*TILE||a.y>=H*TILE||this.walls[Math.floor(a.y/TILE)*W+Math.floor(a.x/TILE)]){a.life=0;break;}const owner=a.owner==='player'?this.player:this.entityById.get(a.owner);const hit=this.nearby(a,40).find(e=>e.id!==a.owner&&dist(e,a)<bodyRadius(e)+7);if(hit&&owner){if(hit.faction!==a.faction||hit.id===a.target){if(hit.role==='dummy'&&owner===this.player){campaignEvent(this,'dummy',{ranged:true,moving:!!hit.moving});if(this.campaign?.status==='active')owner.inventory.arrow=(owner.inventory.arrow||0)+1;}this.damage(owner,hit,a.damage);}a.life=0;}}}this.projectiles=this.projectiles.filter(a=>a.life>0);}
  step(dt){this.resetMotion();this.aiTick++;this.rebuildSpatial();updateHorses(this);this.processPaths(6);if(this.aiTick%34===0)this.updateTerritories(5.1);for(const c of this.corpses)c.age+=dt;
-  for(const e of this.entities){if(e.hp<=0)continue;e.cooldown=Math.max(0,e.cooldown-dt);e.attack=Math.max(0,e.attack-dt);e.timer-=dt;if(tickCombat(this,e,dt))continue;e.craftTimer=(e.craftTimer||0)+dt;
+  for(const e of this.entities){if(e.hp<=0)continue;e.cooldown=Math.max(0,e.cooldown-dt);e.attack=Math.max(0,e.attack-dt);e.timer-=dt;if(tickCombat(this,e,dt))continue;e.craftTimer=(e.craftTimer||0)+dt;if(holdConversation(this,e))continue;
    if(e.role==='dummy'&&e.moving){const target=e.trainingRoute[e.trainingLeg];if(this.move(e,target.x,target.y,75,dt))e.trainingLeg=(e.trainingLeg+1)%e.trainingRoute.length;continue;}if(['wizard','dummy'].includes(e.role))continue;
    if(horseAI(this,e,dt))continue;
    if(lawActorAI(this,e,dt)||rescueAI(this,e,dt))continue;if(eventActorAI(this,e,dt)||projectAI(this,e,dt)||industryAI(this,e,dt))continue;
@@ -285,6 +286,7 @@ export class World{
    if(e.role==='citizen'){if(e.timer<=0||!e.patrolPoint){const z=this.cities.find(z=>z.id===e.faction);e.patrolPoint=this.random()<.35?point(z.x+(this.random()-.5)*12,z.y+(this.random()-.5)*12):{x:e.home.x+(this.random()-.5)*220,y:e.home.y+(this.random()-.5)*220};e.timer=12+this.random()*25;}e.state='errands';this.navigate(e,e.patrolPoint,dt,58);continue;}
    if(e.workBuildingId&&dist(e,e.work)>12){e.state='toWork';this.navigate(e,e.work,dt,75);}else e.state='working';
   }
+  updateIdleFacing(this,dt);
  }
  animalAI(e,dt){const a=ANIMALS[e.role];if(!a.aggressive){const attacker=e.lastAttackerId==='player'?this.player:this.entityById.get(e.lastAttackerId);if(attacker&&attacker.hp>0&&this.elapsed-(e.lastAttackAt??-100)<25&&dist(e,attacker)<1200){e.state='flee';this.move(e,e.x+(e.x-attacker.x)*3,e.y+(e.y-attacker.y)*3,a.speed,dt);return;}const danger=this.nearby(e,200).find(o=>o===this.player||o.role==='hunter'||ANIMALS[o.role]?.aggressive);if(danger){e.state='flee';this.move(e,e.x+(e.x-danger.x)*3,e.y+(e.y-danger.y)*3,a.speed,dt);return;}}
   if(!this.night&&[1,5].includes(this.tile(e.x/TILE,e.y/TILE))){const candidates=[point(e.x/TILE-6,e.y/TILE+7),point(e.x/TILE+6,e.y/TILE-7)].filter(p=>!this.blocked(p.x,p.y));e.patrolPoint=candidates[0]||e.home;}
