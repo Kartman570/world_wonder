@@ -1,0 +1,112 @@
+<!doctype html><meta charset="utf-8" /><title>Environment and Rider Preview</title
+><style>
+  body {
+    background: #20382b;
+    color: #e7d9b7;
+    font: 16px Georgia;
+  }
+  canvas {
+    max-width: 100%;
+    border: 1px solid #ad996a;
+  }
+  h1 {
+    font-size: 22px;
+  }
+</style>
+<h1>Riding Pose: Eight Directions · environment · interior</h1>
+<p id="status">Loading…</p>
+<canvas width="1400" height="1100"></canvas>
+<script type="module">
+  import { CanopyWindow } from '../../src/render/canopy-window.js';
+  import { SpriteSheets } from '../../src/render/sprite-sheets.js';
+  import { EnvironmentSprites, mountedPose } from '../../src/render/environment-sprites.js';
+  const sheets = new SpriteSheets({ maxBytes: 256 * 1024 * 1024 }),
+    env = new EnvironmentSprites(sheets),
+    rider = { role: 'player', riding: 1, hp: 100 },
+    horse = { role: 'horse', hp: 100 };
+  await env.warm([rider, horse]);
+  document.querySelector('#status').textContent = 'Ready';
+  const forestTitle = document.createElement('h1');
+  forestTitle.textContent = 'Forest: Without / With Player Visibility Circle';
+  document.body.append(forestTitle);
+  const forestCanvas = document.createElement('canvas');
+  forestCanvas.width = 1400;
+  forestCanvas.height = 500;
+  document.body.append(forestCanvas);
+  const fc = forestCanvas.getContext('2d'),
+    cutaway = new CanopyWindow();
+  const c = document.querySelector('canvas').getContext('2d');
+  const ids = [
+    'pine',
+    'oak',
+    'birch',
+    'alien_tree_0',
+    'alien_tree_1',
+    'alien_tree_2',
+    'statue',
+    'fountain',
+    'bed',
+    'loom',
+    'anvil',
+    'shelf',
+    'flagpole',
+    'flag',
+  ];
+  function frame(ms) {
+    const t = ms / 1000;
+    c.clearRect(0, 0, 1400, 720);
+    for (let dir = 0; dir < 8; dir++) {
+      const pose = { x: 90 + dir * 170, y: 220, dir, walk: t };
+      c.fillStyle = '#ddd';
+      c.fillText(['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'][dir], pose.x, 255);
+      sheets.draw(c, horse, pose, t);
+      sheets.draw(c, rider, mountedPose(sheets, rider, horse, pose), t);
+    }
+    ids.forEach((id, i) =>
+      env.draw(c, id, 100 + (i % 7) * 190, 480 + Math.floor(i / 7) * 200, { time: t }),
+    );
+    env.draw(c, 'fountain_water', 100, 680, { time: t });
+    env.draw(c, 'dummy_static', 100, 980);
+    env.camp(c, { x: 350, y: 980, fireUntil: 999999 }, t);
+    ['arkRock', 'arkGarden', 'arkFilter', 'arkResonator'].forEach((kind, i) =>
+      env.prop(c, { kind, x: 11 + i * 4, y: 19, w: 2, h: 2 }, t),
+    );
+    env.draw(c, 'cave_wall', 100, 1080, { width: 70 });
+    env.draw(c, 'catacomb_wall', 250, 1080, { width: 70 });
+    for (let pane = 0; pane < 2; pane++) {
+      fc.save();
+      fc.translate(pane * 700, 0);
+      fc.fillStyle = '#53654a';
+      fc.fillRect(0, 0, 700, 500);
+      fc.strokeStyle = '#768363';
+      for (let x = 0; x < 700; x += 50) {
+        fc.beginPath();
+        fc.moveTo(x, 0);
+        fc.lineTo(x, 500);
+        fc.stroke();
+      }
+      fc.fillStyle = '#ddd3ad';
+      fc.fillText(pane ? 'Player Visibility Circle' : 'Without Circle', 20, 30);
+      const p = { x: 350, y: 310, dir: 2, animation: 'idle' };
+      sheets.draw(fc, rider, p, t);
+      sheets.draw(
+        fc,
+        { role: 'cityGuard', hp: 100 },
+        { x: 430, y: 310, dir: 4, animation: 'idle' },
+        t,
+      );
+      for (const tree of [
+        { x: 285, y: 360, s: 1.1 },
+        { x: 420, y: 390, s: 1 },
+        { x: 350, y: 450, s: 1 },
+      ]) {
+        const draw = (c) => env.draw(c, 'oak', tree.x, tree.y, { scale: tree.s });
+        if (pane) cutaway.draw(fc, draw, env.bounds('oak', tree.x, tree.y, { scale: tree.s }), p);
+        else draw(fc);
+      }
+      fc.restore();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>

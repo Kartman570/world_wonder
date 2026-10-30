@@ -1,41 +1,277 @@
 import assert from 'node:assert/strict';
-import {World,TILE} from '../simulation.js';
-import {GUARDS} from '../content.js';
-import {recordCrime,warrant,cityMemory,sentence,settleArrest,imprisonPlayer,openCell,prisonKey,prisonCell,lawTick,lawActorAI,legalHostility,provokeJailer,stealPrisonKey,recoverPrisonInventory,canUseCell} from '../law.js';
-import {movePlayer} from '../player-movement.js';
-const w=new World('734291'),p=w.player;
-assert.deepEqual(w.prisons.map(pr=>pr.cells.length).sort((a,b)=>a-b),[1,2,8]);
-for(const pr of w.prisons){const b=w.buildings[pr.buildingId-1],z=w.cities.find(z=>z.id===pr.city);assert.equal(b.city,z.id);assert.equal(w.entities.filter(e=>e.jailer&&e.faction===z.id).length,z.kind==='capital'?7:z.kind==='town'?1:0);for(const c of pr.cells){assert.ok(w.blocked((c.door.x+.5)*TILE,(c.door.y+.5)*TILE,true));}}
-const city=w.cities.find(z=>z.kind==='town'),id=city.id,guard=w.entities.find(e=>e.faction===id&&GUARDS.includes(e.role)&&!e.jailer&&!e.leader);Object.assign(p,{x:guard.x+30,y:guard.y,weaponDrawn:true});w.rebuildSpatial();
-recordCrime(w,id,'weapon');assert.equal(sentence(w,id).kind,'fine');const first=warrant(w,id);assert.equal(cityMemory(w,id).weaponIncidents,1);recordCrime(w,id,'weapon');assert.equal(cityMemory(w,id).weaponIncidents,1);
+import { World, TILE } from '../src/core/simulation.js';
+import { GUARDS } from '../src/core/content.js';
+import {
+  recordCrime,
+  warrant,
+  cityMemory,
+  sentence,
+  settleArrest,
+  imprisonPlayer,
+  openCell,
+  prisonKey,
+  prisonCell,
+  lawTick,
+  lawActorAI,
+  legalHostility,
+  provokeJailer,
+  stealPrisonKey,
+  recoverPrisonInventory,
+  canUseCell,
+} from '../src/gameplay/law.js';
+import { movePlayer } from '../src/gameplay/player-movement.js';
+const w = new World('734291'),
+  p = w.player;
+assert.deepEqual(
+  w.prisons.map((pr) => pr.cells.length).sort((a, b) => a - b),
+  [1, 2, 8],
+);
+for (const pr of w.prisons) {
+  const b = w.buildings[pr.buildingId - 1],
+    z = w.cities.find((z) => z.id === pr.city);
+  assert.equal(b.city, z.id);
+  assert.equal(
+    w.entities.filter((e) => e.jailer && e.faction === z.id).length,
+    z.kind === 'capital' ? 7 : z.kind === 'town' ? 1 : 0,
+  );
+  for (const c of pr.cells) {
+    assert.ok(w.blocked((c.door.x + 0.5) * TILE, (c.door.y + 0.5) * TILE, true));
+  }
+}
+const city = w.cities.find((z) => z.kind === 'town'),
+  id = city.id,
+  guard = w.entities.find(
+    (e) => e.faction === id && GUARDS.includes(e.role) && !e.jailer && !e.leader,
+  );
+Object.assign(p, { x: guard.x + 30, y: guard.y, weaponDrawn: true });
+w.rebuildSpatial();
+recordCrime(w, id, 'weapon');
+assert.equal(sentence(w, id).kind, 'fine');
+const first = warrant(w, id);
+assert.equal(cityMemory(w, id).weaponIncidents, 1);
+recordCrime(w, id, 'weapon');
+assert.equal(cityMemory(w, id).weaponIncidents, 1);
 // Hide behind an actual building: the warrant and navigated pursuit persist without visual contact.
-const house=w.buildings.find(b=>b.city===id&&b.type==='house');Object.assign(p,{x:house.workSpot.x,y:house.workSpot.y});assert.equal(w.visibleFrom(guard,p),false);assert.equal(lawActorAI(w,guard,.15),true);assert.equal(guard.enemyId,'player');assert.equal(warrant(w,id),first);
-Object.assign(p,{x:0,y:0});lawTick(w);lawActorAI(w,guard,.15);assert.equal(guard.lawPursuit,false);assert.equal(legalHostility(w,guard,p),false);assert.ok(warrant(w,id));assert.equal(warrant(w,w.cities.find(z=>z.id!==id).id),null);
-w.time+=60;lawTick(w);assert.equal(warrant(w,id),null);assert.equal(cityMemory(w,id).history.length,1);
+const house = w.buildings.find((b) => b.city === id && b.type === 'house');
+Object.assign(p, { x: house.workSpot.x, y: house.workSpot.y });
+assert.equal(w.visibleFrom(guard, p), false);
+assert.equal(lawActorAI(w, guard, 0.15), true);
+assert.equal(guard.enemyId, 'player');
+assert.equal(warrant(w, id), first);
+Object.assign(p, { x: 0, y: 0 });
+lawTick(w);
+lawActorAI(w, guard, 0.15);
+assert.equal(guard.lawPursuit, false);
+assert.equal(legalHostility(w, guard, p), false);
+assert.ok(warrant(w, id));
+assert.equal(warrant(w, w.cities.find((z) => z.id !== id).id), null);
+w.time += 60;
+lawTick(w);
+assert.equal(warrant(w, id), null);
+assert.equal(cityMemory(w, id).history.length, 1);
 // New city: first offense is fine-only, including an insolvent player.
-const village=w.cities.find(z=>z.kind==='village'),v=village.id;recordCrime(w,v,'weapon');w.detention={city:v,guard:guard.id};p.inventory.gold=0;assert.ok(settleArrest(w,'accept').ok);assert.equal(warrant(w,v),null);assert.equal(p.imprisoned,undefined);assert.equal(cityMemory(w,v).history[0].status,'releasedWithoutMoney');recordCrime(w,v,'weapon');assert.equal(sentence(w,v).kind,'prison');
+const village = w.cities.find((z) => z.kind === 'village'),
+  v = village.id;
+recordCrime(w, v, 'weapon');
+w.detention = { city: v, guard: guard.id };
+p.inventory.gold = 0;
+assert.ok(settleArrest(w, 'accept').ok);
+assert.equal(warrant(w, v), null);
+assert.equal(p.imprisoned, undefined);
+assert.equal(cityMemory(w, v).history[0].status, 'releasedWithoutMoney');
+recordCrime(w, v, 'weapon');
+assert.equal(sentence(w, v).kind, 'prison');
 // First weapon offense in capital charges a real transfer, then resolves the warrant.
-const cap=w.cities.find(z=>z.kind==='capital'),cg=w.entities.find(e=>e.jailer&&e.faction===cap.id),gold=cg.inventory.gold;recordCrime(w,cap.id,'weapon');w.detention={city:cap.id,guard:cg.id};p.inventory.gold=100;settleArrest(w,'accept');assert.equal(p.inventory.gold,65);assert.equal(cg.inventory.gold,gold+35);
-recordCrime(w,id,'murder');assert.equal(sentence(w,id).kind,'prison');const key=prisonKey(id);p.inventory={sword:1,gold:65,[key]:1};imprisonPlayer(w,id);assert.deepEqual(p.inventory,{[key]:1});assert.equal(w.prisonStorage[id].sword,1);const c=prisonCell(w,p.imprisoned.cellId),y=p.y;for(let i=0;i<80;i++)movePlayer(w,0,1,true,.05);assert.ok(p.y<(c.door.y)*TILE,'Closed gate physically holds player');assert.ok(p.y>=y);assert.ok(openCell(w,c.id).ok);for(let i=0;i<80&&p.imprisoned;i++){movePlayer(w,0,1,false,.05);lawTick(w);}assert.equal(p.imprisoned,null);assert.equal(warrant(w,id).kind,'escape');assert.equal(warrant(w,id).expires-w.time,10080);assert.ok(recoverPrisonInventory(w,id).ok);assert.equal(p.inventory.sword,1);
-const saved=World.restore(w.save());assert.equal(warrant(saved,id).kind,'escape');assert.equal(prisonCell(saved,c.id).open,true);assert.equal(saved.cityMemory[v].weaponIncidents,2);assert.equal(saved.entities.filter(e=>e.jailer).length,w.entities.filter(e=>e.jailer).length);saved.time+=10080;lawTick(saved);assert.equal(warrant(saved,id),null);
+const cap = w.cities.find((z) => z.kind === 'capital'),
+  cg = w.entities.find((e) => e.jailer && e.faction === cap.id),
+  gold = cg.inventory.gold;
+recordCrime(w, cap.id, 'weapon');
+w.detention = { city: cap.id, guard: cg.id };
+p.inventory.gold = 100;
+settleArrest(w, 'accept');
+assert.equal(p.inventory.gold, 65);
+assert.equal(cg.inventory.gold, gold + 35);
+recordCrime(w, id, 'murder');
+assert.equal(sentence(w, id).kind, 'prison');
+const key = prisonKey(id);
+p.inventory = { sword: 1, gold: 65, [key]: 1 };
+imprisonPlayer(w, id);
+assert.deepEqual(p.inventory, { [key]: 1 });
+assert.equal(w.prisonStorage[id].sword, 1);
+const c = prisonCell(w, p.imprisoned.cellId),
+  y = p.y;
+for (let i = 0; i < 80; i++) movePlayer(w, 0, 1, true, 0.05);
+assert.ok(p.y < c.door.y * TILE, 'Closed gate physically holds player');
+assert.ok(p.y >= y);
+assert.ok(openCell(w, c.id).ok);
+for (let i = 0; i < 80 && p.imprisoned; i++) {
+  movePlayer(w, 0, 1, false, 0.05);
+  lawTick(w);
+}
+assert.equal(p.imprisoned, null);
+assert.equal(warrant(w, id).kind, 'escape');
+assert.equal(warrant(w, id).expires - w.time, 10080);
+assert.ok(recoverPrisonInventory(w, id).ok);
+assert.equal(p.inventory.sword, 1);
+const saved = World.restore(w.save());
+assert.equal(warrant(saved, id).kind, 'escape');
+assert.equal(prisonCell(saved, c.id).open, true);
+assert.equal(saved.cityMemory[v].weaponIncidents, 2);
+assert.equal(
+  saved.entities.filter((e) => e.jailer).length,
+  w.entities.filter((e) => e.jailer).length,
+);
+saved.time += 10080;
+lawTick(saved);
+assert.equal(warrant(saved, id), null);
 // No-key route is a real unarmed fight with an armored guard opening and blocking the gate.
-p.inventory={gold:10};imprisonPlayer(w,id);const cell=prisonCell(w,p.imprisoned.cellId);assert.equal(openCell(w,cell.id).ok,false);assert.ok(provokeJailer(w).ok);assert.equal(cell.open,false,'Guard approaches before opening the gate');const approaching=w.entities.find(e=>e.challengeCell===cell.id);Object.assign(approaching,{x:(cell.door.x+.5)*TILE,y:(cell.door.y+1.4)*TILE});lawActorAI(w,approaching,.15);assert.ok(cell.open);assert.equal(p.weapon,null);assert.equal(p.weaponDrawn,true);assert.ok(w.entities.some(e=>e.challengeCell===cell.id&&e.inventory.armor));p.cooldown=0;assert.ok(w.attackPlayer().ok);p.pendingStrike=null;
+p.inventory = { gold: 10 };
+imprisonPlayer(w, id);
+const cell = prisonCell(w, p.imprisoned.cellId);
+assert.equal(openCell(w, cell.id).ok, false);
+assert.ok(provokeJailer(w).ok);
+assert.equal(cell.open, false, 'Guard approaches before opening the gate');
+const approaching = w.entities.find((e) => e.challengeCell === cell.id);
+Object.assign(approaching, { x: (cell.door.x + 0.5) * TILE, y: (cell.door.y + 1.4) * TILE });
+lawActorAI(w, approaching, 0.15);
+assert.ok(cell.open);
+assert.equal(p.weapon, null);
+assert.equal(p.weaponDrawn, true);
+assert.ok(w.entities.some((e) => e.challengeCell === cell.id && e.inventory.armor));
+p.cooldown = 0;
+assert.ok(w.attackPlayer().ok);
+p.pendingStrike = null;
 // Freed inmates have distinct goals; thieves physically travel before changing faction.
-const pr=w.prisons.find(pr=>pr.city===cap.id);const inmates=w.entities.filter(e=>e.cellId&&e.prisonCity===cap.id);for(const e of inmates)prisonCell(w,e.cellId).open=true;const murderer=inmates.find(e=>e.prisonCrime==='murder'),thief=inmates.find(e=>e.prisonCrime==='theft'),drunk=inmates.find(e=>e.prisonCrime==='drunk');lawActorAI(w,murderer,.15);assert.equal(murderer.rioter,true);lawActorAI(w,thief,.15);assert.equal(thief.state,'escapingToBandits');assert.equal(thief.role,'prisoner');lawActorAI(w,drunk,.15);assert.equal(drunk.state,'waitingForRiot');for(const g of w.entities.filter(e=>e.faction===cap.id&&GUARDS.includes(e.role)))g.hp=0;lawActorAI(w,drunk,.15);assert.equal(drunk.cellId,null);assert.equal(drunk.role,'drunkard');const camp=w.places.filter(z=>['red','ash','thorn'].includes(z.id)).sort((a,b)=>Math.hypot(a.x*TILE-thief.x,a.y*TILE-thief.y)-Math.hypot(b.x*TILE-thief.x,b.y*TILE-thief.y))[0];Object.assign(thief,{x:camp.x*TILE,y:camp.y*TILE});lawActorAI(w,thief,.15);assert.equal(thief.role,'bandit');assert.equal(thief.faction,camp.id);
+const pr = w.prisons.find((pr) => pr.city === cap.id);
+const inmates = w.entities.filter((e) => e.cellId && e.prisonCity === cap.id);
+for (const e of inmates) prisonCell(w, e.cellId).open = true;
+const murderer = inmates.find((e) => e.prisonCrime === 'murder'),
+  thief = inmates.find((e) => e.prisonCrime === 'theft'),
+  drunk = inmates.find((e) => e.prisonCrime === 'drunk');
+lawActorAI(w, murderer, 0.15);
+assert.equal(murderer.rioter, true);
+lawActorAI(w, thief, 0.15);
+assert.equal(thief.state, 'escapingToBandits');
+assert.equal(thief.role, 'prisoner');
+lawActorAI(w, drunk, 0.15);
+assert.equal(drunk.state, 'waitingForRiot');
+for (const g of w.entities.filter((e) => e.faction === cap.id && GUARDS.includes(e.role))) g.hp = 0;
+lawActorAI(w, drunk, 0.15);
+assert.equal(drunk.cellId, null);
+assert.equal(drunk.role, 'drunkard');
+const camp = w.places
+  .filter((z) => ['red', 'ash', 'thorn'].includes(z.id))
+  .sort(
+    (a, b) =>
+      Math.hypot(a.x * TILE - thief.x, a.y * TILE - thief.y) -
+      Math.hypot(b.x * TILE - thief.x, b.y * TILE - thief.y),
+  )[0];
+Object.assign(thief, { x: camp.x * TILE, y: camp.y * TILE });
+lawActorAI(w, thief, 0.15);
+assert.equal(thief.role, 'bandit');
+assert.equal(thief.faction, camp.id);
 // Gate interactions from the corridor are allowed even though the locked door blocks combat LOS.
-const gateTest=prisonCell(w,c.id);gateTest.open=false;p.imprisoned=null;Object.assign(p,{x:(gateTest.door.x+.5)*TILE,y:(gateTest.door.y+1.5)*TILE});assert.equal(canUseCell(w,gateTest),true);assert.equal(w.lineClear(p,{x:(gateTest.door.x+.5)*TILE,y:(gateTest.door.y+.5)*TILE}),false);
+const gateTest = prisonCell(w, c.id);
+gateTest.open = false;
+p.imprisoned = null;
+Object.assign(p, { x: (gateTest.door.x + 0.5) * TILE, y: (gateTest.door.y + 1.5) * TILE });
+assert.equal(canUseCell(w, gateTest), true);
+assert.equal(
+  w.lineClear(p, { x: (gateTest.door.x + 0.5) * TILE, y: (gateTest.door.y + 0.5) * TILE }),
+  false,
+);
 // Key theft is limited to an actual key on a jailer and a concealed approach from behind.
-p.imprisoned=null;w.cityMemory[id].active=null;const jailer=w.entities.find(e=>e.jailer&&e.faction===id);jailer.dir=0;p.weaponDrawn=false;Object.assign(p,{x:jailer.x+30,y:jailer.y});assert.equal(stealPrisonKey(w,jailer).ok,false);p.x=jailer.x-30;assert.ok(stealPrisonKey(w,jailer).ok);assert.equal(jailer.inventory[key],0);
+p.imprisoned = null;
+w.cityMemory[id].active = null;
+const jailer = w.entities.find((e) => e.jailer && e.faction === id);
+jailer.dir = 0;
+p.weaponDrawn = false;
+Object.assign(p, { x: jailer.x + 30, y: jailer.y });
+assert.equal(stealPrisonKey(w, jailer).ok, false);
+p.x = jailer.x - 30;
+assert.ok(stealPrisonKey(w, jailer).ok);
+assert.equal(jailer.inventory[key], 0);
 // Restored active records remain linked to history when the arrest is resolved.
-const linked=World.restore(w.save());const lm=cityMemory(linked,v);assert.equal(lm.active,lm.history.find(h=>h.kind===lm.active.kind&&h.at===lm.active.at));
+const linked = World.restore(w.save());
+const lm = cityMemory(linked, v);
+assert.equal(
+  lm.active,
+  lm.history.find((h) => h.kind === lm.active.kind && h.at === lm.active.at),
+);
 // Losing the jail fight cannot turn death/respawn into a free escape.
-p.inventory={};imprisonPlayer(w,id);provokeJailer(w);p.hp=1;const jail=w.entities.find(e=>e.challengeCell===p.imprisoned.cellId);w.damage(jail,p,999);assert.ok(p.imprisoned);assert.equal(prisonCell(w,p.imprisoned.cellId).open,false);assert.equal(p.hp,100);
+p.inventory = {};
+imprisonPlayer(w, id);
+provokeJailer(w);
+p.hp = 1;
+const jail = w.entities.find((e) => e.challengeCell === p.imprisoned.cellId);
+w.damage(jail, p, 999);
+assert.ok(p.imprisoned);
+assert.equal(prisonCell(w, p.imprisoned.cellId).open, false);
+assert.equal(p.hp, 100);
 // Drinking consumes the tavern's real stock and pays its keeper.
-const drinker=w.entities.find(e=>e.drunkard&&!e.cellId&&e.tavern),inn=w.buildings.find(b=>b.id===drinker.tavern),keeper=w.entities.find(e=>e.role==='cook'&&e.faction===drinker.faction);Object.assign(drinker,inn.workSpot);drinker.drink=0;drinker.drinkUntil=w.time;const ale=keeper.inventory.ale,coins=keeper.inventory.gold;lawActorAI(w,drinker,.15);assert.equal(drinker.drink,1);assert.equal(keeper.inventory.ale,ale-1);assert.equal(keeper.inventory.gold,coins+2);
+const drinker = w.entities.find((e) => e.drunkard && !e.cellId && e.tavern),
+  inn = w.buildings.find((b) => b.id === drinker.tavern),
+  keeper = w.entities.find((e) => e.role === 'cook' && e.faction === drinker.faction);
+Object.assign(drinker, inn.workSpot);
+drinker.drink = 0;
+drinker.drinkUntil = w.time;
+const ale = keeper.inventory.ale,
+  coins = keeper.inventory.gold;
+lawActorAI(w, drinker, 0.15);
+assert.equal(drinker.drink, 1);
+assert.equal(keeper.inventory.ale, ale - 1);
+assert.equal(keeper.inventory.gold, coins + 2);
 // Pre-law saves migrate residents to their regenerated shops and add law NPCs once.
-const old=JSON.parse(w.save());delete old.lawRevision;old.entities=old.entities.filter(e=>!e.jailer&&!e.prisonCrime&&!e.drunkard&&!e.roadPatrol);old.player.imprisoned=null;const migrated=World.restore(JSON.stringify(old));assert.equal(migrated.entities.filter(e=>e.jailer).length,8);for(const e of migrated.entities.filter(e=>e.shopkeeper))assert.equal(migrated.interiorAt(e)?.id,e.workBuildingId);
+const old = JSON.parse(w.save());
+delete old.lawRevision;
+old.entities = old.entities.filter(
+  (e) => !e.jailer && !e.prisonCrime && !e.drunkard && !e.roadPatrol,
+);
+old.player.imprisoned = null;
+const migrated = World.restore(JSON.stringify(old));
+assert.equal(migrated.entities.filter((e) => e.jailer).length, 8);
+for (const e of migrated.entities.filter((e) => e.shopkeeper))
+  assert.equal(migrated.interiorAt(e)?.id, e.workBuildingId);
 // The jailer must physically reach the upper cell row through an actual side aisle.
-const routeWorld=new World('734291'),capitalPrison=routeWorld.prisons.find(pr=>routeWorld.cities.find(z=>z.id===pr.city).kind==='capital');for(const cell of capitalPrison.cells){const b=routeWorld.buildings[capitalPrison.buildingId-1];assert.ok(routeWorld.path(b.entrance,{x:(cell.door.x+.5)*TILE,y:(cell.door.y+1.5)*TILE})?.length,'Each cell has a reachable guard aisle');}imprisonPlayer(routeWorld,capitalPrison.city);const locked=prisonCell(routeWorld,routeWorld.player.imprisoned.cellId);provokeJailer(routeWorld);for(let i=0;i<400&&!locked.open;i++)routeWorld.update(.15);assert.ok(locked.open,'Jailer reaches door before unlocking it');const jailerAtDoor=routeWorld.entities.find(e=>e.challengeCell===locked.id);assert.ok(Math.hypot(jailerAtDoor.x-(locked.door.x+.5)*TILE,jailerAtDoor.y-(locked.door.y+1.4)*TILE)<32);
+const routeWorld = new World('734291'),
+  capitalPrison = routeWorld.prisons.find(
+    (pr) => routeWorld.cities.find((z) => z.id === pr.city).kind === 'capital',
+  );
+for (const cell of capitalPrison.cells) {
+  const b = routeWorld.buildings[capitalPrison.buildingId - 1];
+  assert.ok(
+    routeWorld.path(b.entrance, { x: (cell.door.x + 0.5) * TILE, y: (cell.door.y + 1.5) * TILE })
+      ?.length,
+    'Each cell has a reachable guard aisle',
+  );
+}
+imprisonPlayer(routeWorld, capitalPrison.city);
+const locked = prisonCell(routeWorld, routeWorld.player.imprisoned.cellId);
+provokeJailer(routeWorld);
+for (let i = 0; i < 400 && !locked.open; i++) routeWorld.update(0.15);
+assert.ok(locked.open, 'Jailer reaches door before unlocking it');
+const jailerAtDoor = routeWorld.entities.find((e) => e.challengeCell === locked.id);
+assert.ok(
+  Math.hypot(
+    jailerAtDoor.x - (locked.door.x + 0.5) * TILE,
+    jailerAtDoor.y - (locked.door.y + 1.4) * TILE,
+  ) < 32,
+);
 // Inventory/HUD normalization must not cancel an unarmed wind-up every few frames.
-routeWorld.player.cooldown=0;routeWorld.player.aimAngle=Math.PI/2;const fistGuard=routeWorld.entities.find(e=>e.challengeCell===locked.id);Object.assign(fistGuard,{x:routeWorld.player.x,y:routeWorld.player.y+55});routeWorld.rebuildSpatial();const health=fistGuard.hp;assert.ok(routeWorld.attackPlayer().ok);for(let i=0;i<15;i++){routeWorld.normalizeEquipment();routeWorld.elapsed+=.02;const {tickCombat}=await import('../combat.js');tickCombat(routeWorld,routeWorld.player,.02);}assert.ok(fistGuard.hp<health,'Unarmed strike resolves despite HUD refreshes');
-console.log('✓ Городская память, сроки розыска, границы погони, штраф/бедность/повтор, убийство, заключение, ключи, решётки, побег, сохранение и три поведения заключённых');
+routeWorld.player.cooldown = 0;
+routeWorld.player.aimAngle = Math.PI / 2;
+const fistGuard = routeWorld.entities.find((e) => e.challengeCell === locked.id);
+Object.assign(fistGuard, { x: routeWorld.player.x, y: routeWorld.player.y + 55 });
+routeWorld.rebuildSpatial();
+const health = fistGuard.hp;
+assert.ok(routeWorld.attackPlayer().ok);
+for (let i = 0; i < 15; i++) {
+  routeWorld.normalizeEquipment();
+  routeWorld.elapsed += 0.02;
+  const { tickCombat } = await import('../src/gameplay/combat.js');
+  tickCombat(routeWorld, routeWorld.player, 0.02);
+}
+assert.ok(fistGuard.hp < health, 'Unarmed strike resolves despite HUD refreshes');
+console.log(
+  '✓ Town memory, wanted periods, pursuit boundaries, fines/poverty/repeat offenses, murder, imprisonment, keys, bars, escape, saving and three prisoner behaviors',
+);

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Basin, Clans and Workshops</title
+  ><link rel="stylesheet" href="../../src/ui/game.css" /><style>
+    body {
+      overflow: auto;
+      background: #19251f;
+      color: #e0d4b5;
+      padding: 28px;
+    }
+    main {
+      max-width: 1280px;
+      margin: auto;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: #65715c;
+      margin: 15px 0;
+    }
+    h1 {
+      font-size: 28px;
+    }
+    p {
+      color: #b4bda8;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+  </style>
+  <main>
+    <div class="eyebrow">ALPHA 14 · REGIONS AND SETTLEMENTS</div>
+    <h1>Arctaria and the Wastes</h1>
+    <p id="status">Generating…</p>
+    <div class="pair">
+      <canvas id="ark" width="640" height="640"></canvas
+      ><canvas id="desert" width="640" height="640"></canvas>
+    </div>
+    <h1>Workshops and Alien Vegetation</h1>
+    <canvas id="gallery" width="1280" height="760"></canvas>
+  </main>
+  <script type="module">
+    import { World, W, H } from '../../src/core/simulation.js';
+    import { drawArchitecture, drawAlienPlant } from '../../src/render/architectural-details.js';
+    const w = new World('734291'),
+      image = document.createElement('canvas');
+    image.width = W;
+    image.height = H;
+    const c = image.getContext('2d'),
+      colors = [
+        '#35513b',
+        '#89805a',
+        '#335d65',
+        '#969778',
+        '#396b79',
+        '#ad976e',
+        '#7d8a50',
+        '#21252d',
+        '#89945c',
+        '#456151',
+        '#8b887b',
+        '#586b70',
+        '#b4b4a2',
+        '#83745d',
+        '#93866c',
+        '#bba376',
+        '#796289',
+        '#5e6270',
+        '#8c9a92',
+        '#7c6c4c',
+      ];
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        c.fillStyle = colors[w.tiles[y * W + x]];
+        c.fillRect(x, y, 1, 1);
+      }
+    for (const b of w.buildings) {
+      c.fillStyle = b.type === 'arkVault' ? '#c2c7bf' : '#b7a580';
+      c.fillRect(b.x, b.y, b.w, b.h);
+    }
+    for (const id of ['ark', 'desert']) {
+      const a = w.loreGeography[id],
+        out = document.querySelector('#' + id).getContext('2d'),
+        size = id === 'ark' ? 340 : 550;
+      out.imageSmoothingEnabled = false;
+      out.drawImage(image, a.x - size / 2, a.y - size / 2, size, size, 0, 0, 640, 640);
+      out.font = '14px system-ui';
+      out.textAlign = 'center';
+      for (const z of w.places.filter((z) => (id === 'ark' ? z.id === 'ark-ledge' : z.nomadClan))) {
+        const x = ((z.x - a.x + size / 2) / size) * 640,
+          y = ((z.y - a.y + size / 2) / size) * 640;
+        out.fillStyle = '#efdcaa';
+        out.fillText(z.name, x, y - 20);
+      }
+    }
+    const out = document.querySelector('#gallery').getContext('2d');
+    out.fillStyle = '#65715c';
+    out.fillRect(0, 0, 1280, 760);
+    const types = [
+      'smith',
+      'tailor',
+      'warehouse',
+      'barracks',
+      'inn',
+      'stable',
+      'apothecary',
+      'bowshop',
+    ];
+    for (let i = 0; i < types.length; i++) {
+      const x = 30 + (i % 4) * 315,
+        y = 75 + Math.floor(i / 4) * 260;
+      out.save();
+      out.translate(x, y);
+      out.scale(0.58, 0.58);
+      const b = { x: 0, y: 0, w: 8, h: 5, type: types[i] };
+      out.fillStyle = '#a29b7f';
+      out.fillRect(0, 0, 384, 240);
+      out.fillStyle = '#526152';
+      out.beginPath();
+      out.moveTo(-10, 10);
+      out.lineTo(192, -50);
+      out.lineTo(394, 10);
+      out.lineTo(192, 42);
+      out.fill();
+      drawArchitecture(out, b, 48, 1);
+      out.restore();
+      out.fillStyle = '#eadfc0';
+      out.font = '16px system-ui';
+      out.fillText(
+        ['Smithy', 'Tailor', 'Warehouse', 'Barracks', 'Tavern', 'Stable', 'Herbalist', 'Bow Shop'][
+          i
+        ],
+        x,
+        y - 45,
+      );
+    }
+    for (let i = 0; i < 9; i++)
+      drawAlienPlant(out, { x: 80 + i * 140, y: 745, s: 0.8, species: i % 3 });
+    document.querySelector('#status').textContent =
+      'Uneven Rim and a Pass Facing the Road · 6 warring clans · houses: ' +
+      w.cities.map((z) => z.houseCount).join(' / ');
+  </script>
+</html>

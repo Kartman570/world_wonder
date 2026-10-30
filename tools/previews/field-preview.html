@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Field Mechanics Preview</title
+  ><link rel="stylesheet" href="../../src/ui/game.css" />
+  <body style="overflow: auto; background: #182a24; color: #ded4b3; padding: 40px">
+    <main style="max-width: 850px; margin: auto">
+      <div class="eyebrow">ALPHA 10 LABORATORY</div>
+      <h1>Field Mechanics</h1>
+      <p>
+        Separate test saves. The main journey is unaffected. A button creates the scenario; on the
+        game start screen, choose Continue Saved Journey.
+      </p>
+      <div id="scenes" class="actions"></div>
+    </main>
+    <script type="module">
+      import { World, TILE } from '../../src/core/simulation.js';
+      import { Expedition } from '../../src/core/expedition.js';
+      const scenarios = {
+        stable: {
+          label: 'Stable · purchase and riding',
+          prepare(w) {
+            const g = w.entities.find((e) => e.role === 'groom');
+            w.player.x = g.x;
+            w.player.y = g.y + 35;
+            w.player.inventory.gold = 500;
+          },
+        },
+        stock: {
+          label: 'New Life · cathedral weapons',
+          prepare(w) {
+            w.player.hp = 0;
+            w.die(w.player);
+            w.deathReport.acknowledged = true;
+            Object.assign(w.player, { x: w.trainingRack.x, y: w.trainingRack.y });
+          },
+        },
+        webs: {
+          label: 'Silk Road · webs and spiders',
+          prepare(w) {
+            const z = w.places.find((z) => z.id === 'silk-road');
+            w.player.x = (z.x + 0.5) * TILE;
+            w.player.y = (z.y + 9.5) * TILE;
+            w.player.inventory.medicine = 3;
+            w.player.inventory.sword = 1;
+          },
+        },
+        alert: {
+          label: 'Distant Arrow · alarm propagation',
+          prepare(w) {
+            const z = w.loreGeography.desert,
+              p = w.player;
+            p.x = (z.x - 140) * TILE;
+            p.y = (z.y + 30) * TILE;
+            w.entities = w.entities.filter((e) => Math.hypot(e.x - p.x, e.y - p.y) > 3500);
+            for (let i = 0; i < 4; i++) {
+              const e = w.safeSpawn(
+                i % 2 ? 'banditArcher' : 'bandit',
+                'red',
+                p.x / TILE + 10 + i * 3,
+                p.y / TILE + (i % 2) * 3,
+                'Bandit from the Test Squad',
+              );
+              e.home = { x: e.x, y: e.y };
+            }
+            p.inventory.arrow = 90;
+            p.inventory.bow = 1;
+            p.weaponMode = 'ranged';
+            p.equipment.ranged = 'bow';
+          },
+        },
+      };
+      for (const [id, scene] of Object.entries(scenarios)) {
+        const b = document.createElement('button');
+        b.textContent = scene.label;
+        b.onclick = () => {
+          const w = new World('field-ui-' + id);
+          scene.prepare(w);
+          w.rebuildSpatial();
+          w.resetMotion();
+          const slot = 'qa-field-' + id;
+          localStorage.setItem('ashen-road-save:' + slot, new Expedition(w).save());
+          location.href = './?slot=' + slot;
+        };
+        document.querySelector('#scenes').append(b);
+      }
+    </script>
+  </body>
+</html>

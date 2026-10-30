@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Living Region — Laboratory</title
+  ><link rel="stylesheet" href="../../src/ui/game.css" /><style>
+    body {
+      overflow: auto;
+      background: #182520;
+    }
+    main {
+      max-width: 1050px;
+      margin: 28px auto;
+      padding: 24px;
+    }
+    nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    #panel {
+      padding: 28px;
+      background: #14211e;
+      border: 1px solid #73816b;
+    }
+    canvas {
+      width: 100%;
+      height: 180px;
+      background: #28382f;
+      border: 1px solid #65715b;
+    }
+    #feedback {
+      color: #e3c98c;
+      min-height: 28px;
+    }
+    .recipe-card {
+      margin: 15px 0;
+    }
+    button {
+      cursor: pointer;
+    }
+    h1 {
+      margin: 12px 0;
+    }
+  </style>
+  <main>
+    <div class="eyebrow">SEPARATE TEST WORLD · NO SAVE</div>
+    <h1>A Town That Changes</h1>
+    <p>
+      The laboratory uses game functions. Materials and reputation are supplied in advance to test
+      projects and companions. Your journey is unaffected.
+    </p>
+    <canvas id="preview" width="1000" height="180"></canvas>
+    <nav>
+      <button class="action" id="projects">Projects</button
+      ><button class="action" id="party">Party</button
+      ><button class="action" id="hire">Hire Hunter</button
+      ><button class="action" id="work">60 seconds of work</button
+      ><button class="action" id="news">Region</button>
+    </nav>
+    <p id="feedback" role="status"></p>
+    <section id="panel"></section>
+  </main>
+  <script type="module">
+    import { World } from '../../src/core/simulation.js';
+    import { cityMemory } from '../../src/gameplay/law.js';
+    import { renderProjects } from '../../src/ui/projects-ui.js';
+    import { renderPartyPanel } from '../../src/ui/party-ui.js';
+    import { hireCompanion } from '../../src/gameplay/companions.js';
+    import { renderLivingPanel } from '../../src/ui/living-ui.js';
+    import { drawCharacter } from '../../src/render/character-sprites.js';
+    import { drawIndustryProp } from '../../src/render/adventure-render.js';
+    const w = new World('living-laboratory'),
+      z = w.cities[0],
+      keeper = w.entities.find((e) => e.role === 'quartermaster' && e.faction === z.id),
+      builder = w.entities.find((e) => e.projectBuilder && e.faction === z.id),
+      hunter = w.entities.find((e) => e.role === 'hunter' && e.faction === z.id),
+      p = w.player;
+    w.entities = [keeper, builder, hunter];
+    p.inventory = {
+      gold: 1800,
+      planks: 40,
+      ingot: 20,
+      tools: 2,
+      cloth: 20,
+      medicine: 12,
+      leather: 12,
+      arrow: 60,
+      ration: 6,
+    };
+    p.weaponDrawn = false;
+    Object.assign(p, { x: keeper.x, y: keeper.y });
+    Object.assign(hunter, { x: keeper.x + 25, y: keeper.y });
+    cityMemory(w, z.id).reputation = 40;
+    w.rebuildSpatial();
+    let tab = 'projects';
+    const root = document.querySelector('#panel'),
+      feedback = document.querySelector('#feedback'),
+      notify = (t) => (feedback.textContent = t);
+    function paint() {
+      const c = document.querySelector('canvas').getContext('2d');
+      c.clearRect(0, 0, 1000, 180);
+      c.fillStyle = '#d6c796';
+      c.font = '14px Georgia';
+      c.fillText('Carpenter', 45, 25);
+      c.fillText('Improved Mill', 235, 25);
+      c.fillText('Infirmary', 490, 25);
+      c.fillText('Arsenal', 715, 25);
+      drawCharacter(c, { ...builder, x: 90, y: 160 }, { x: 90, y: 160, dir: 1, walk: 0 });
+      for (const [kind, x] of [
+        ['improvedMill', 5.5],
+        ['clinicCabinet', 10.8],
+        ['cityArmory', 15.5],
+      ])
+        drawIndustryProp(c, { kind, x, y: 2 });
+    }
+    function render() {
+      if (tab === 'projects')
+        renderProjects(root, w, z.id, { notify, changed: paint, refresh: render });
+      else if (tab === 'party')
+        renderPartyPanel(root, w, { notify, changed: paint, refresh: render });
+      else renderLivingPanel(root, w);
+      paint();
+    }
+    document.querySelector('#projects').onclick = () => {
+      tab = 'projects';
+      render();
+    };
+    document.querySelector('#party').onclick = () => {
+      tab = 'party';
+      render();
+    };
+    document.querySelector('#news').onclick = () => {
+      tab = 'news';
+      render();
+    };
+    document.querySelector('#hire').onclick = () => {
+      notify(hireCompanion(w, hunter).message);
+      tab = 'party';
+      render();
+    };
+    document.querySelector('#work').onclick = () => {
+      for (let i = 0; i < 400; i++) w.update(0.15);
+      notify(
+        'One minute of working time has passed. ' +
+          Math.round(w.player.inventory.gold) +
+          ' gold in the bag.',
+      );
+      render();
+    };
+    render();
+  </script>
+</html>

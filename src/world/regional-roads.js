@@ -1,0 +1,358 @@
+import { frontierContains, roadForbidden } from './frontier-geography.js';
+import { placeForestCamps } from './woodland-camps.js';
+// Azgaar's Delaunay -> Urquhart connections and terrain-weighted path search,
+// adapted to walkable tiles and narrow bridges. MIT attribution: vendor/azgaar.LICENSE.
+import { W, H, TILE, point } from '../core/content.js';
+import { Delaunay } from '../../vendor/d3-delaunay.js';
+import { MinHeap, segmentDistance } from './map-geometry.js';
+const hab = [0, 4, 10, 22, 30, 50, 100, 80, 90, 12, 4, 0, 12];
+export function urquhartEdges(points) {
+  if (points.length < 2) return [];
+  if (points.length === 2) return [[0, 1]];
+  const { triangles } = Delaunay.from(points),
+    edges = new Map(),
+    remove = new Set(),
+    key = (a, b) => (a < b ? a + ':' + b : b + ':' + a);
+  for (let i = 0; i < triangles.length; i += 3) {
+    const ids = [triangles[i], triangles[i + 1], triangles[i + 2]];
+    let longest,
+      score = -1;
+    for (let j = 0; j < 3; j++) {
+      const a = ids[j],
+        b = ids[(j + 1) % 3],
+        k = key(a, b),
+        d = (points[a][0] - points[b][0]) ** 2 + (points[a][1] - points[b][1]) ** 2;
+      edges.set(k, [a, b]);
+      if (d > score) {
+        score = d;
+        longest = k;
+      }
+    }
+    remove.add(longest);
+  }
+  return [...edges].filter(([k]) => !remove.has(k)).map(([, v]) => v);
+}
+function closestCell(w, mesh, p) {
+  const nx = W / 8 + 1,
+    ix = Math.round(p[0] / 8),
+    iy = Math.round(p[1] / 8);
+  let best = -1,
+    d = Infinity;
+  for (let y = Math.max(0, iy - 5); y <= Math.min(H / 8, iy + 5); y++)
+    for (let x = Math.max(0, ix - 5); x <= Math.min(W / 8, ix + 5); x++) {
+      const i = y * nx + x,
+        q = mesh.points[i],
+        tile = (w.tiles || w.naturalTiles)[Math.round(q[1]) * W + Math.round(q[0])];
+      if (
+        w.roadObstacles?.[Math.round(q[1]) * W + Math.round(q[0])] ||
+        [2, 17].includes(tile) ||
+        mesh.neighbors[i].every((j) =>
+          [2, 17].includes(
+            (w.tiles || w.naturalTiles)[
+              Math.round(mesh.points[j][1]) * W + Math.round(mesh.points[j][0])
+            ],
+          ),
+        )
+      )
+        continue;
+      const n = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2;
+      if (n < d) {
+        d = n;
+        best = i;
+      }
+    }
+  return best;
+}
+
+function fineRoute(w, from, to) {
+  const tiles = w.tiles || w.naturalTiles,
+    safe = (p) => {
+      const x = Math.max(1, Math.min(W - 2, Math.round(p[0]))),
+        y = Math.max(1, Math.min(H - 2, Math.round(p[1])));
+      if (![2, 17].includes(tiles[y * W + x])) return y * W + x;
+      for (let r = 1; r <= 30; r++)
+        for (let dy = -r; dy <= r; dy++)
+          for (let dx = -r; dx <= r; dx++) {
+            const xx = x + dx,
+              yy = y + dy;
+            if (
+              xx > 0 &&
+              yy > 0 &&
+              xx < W - 1 &&
+              yy < H - 1 &&
+              ![2, 17].includes(tiles[yy * W + xx])
+            )
+              return yy * W + xx;
+          }
+      return -1;
+    },
+    start = safe(from),
+    goal = safe(to);
+  if (start < 0 || goal < 0) return null;
+  const costs = new Float32Array(W * H).fill(Infinity),
+    prev = new Int32Array(W * H).fill(-1),
+    heap = new MinHeap(),
+    closed = new Uint8Array(W * H),
+    gx = goal % W,
+    gy = Math.floor(goal / W);
+  costs[start] = 0;
+  heap.push(start, 0);
+  while (heap.length) {
+    const { id } = heap.pop();
+    if (closed[id]) continue;
+    closed[id] = 1;
+    if (id === goal) break;
+    const x = id % W,
+      y = Math.floor(id / W);
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const xx = x + dx,
+        yy = y + dy,
+        j = yy * W + xx;
+      if (
+        xx < 1 ||
+        yy < 1 ||
+        xx >= W - 1 ||
+        yy >= H - 1 ||
+        closed[j] ||
+        tiles[j] === 17 ||
+        w.roadObstacles?.[j]
+      )
+        continue;
+      const c =
+        costs[id] +
+        (tiles[j] === 2 ? 120 : tiles[j] === 4 ? 32 : [1, 3, 5, 18].includes(tiles[j]) ? 1 : 2.5) +
+        Math.abs(w.elevation[j] - w.elevation[id]) * 0.1;
+      if (c < costs[j]) {
+        costs[j] = c;
+        prev[j] = id;
+        heap.push(j, c + Math.abs(xx - gx) + Math.abs(yy - gy));
+      }
+    }
+  }
+  if (!Number.isFinite(costs[goal])) return null;
+  const ids = [];
+  for (let i = goal; i >= 0; i = prev[i]) {
+    ids.push(i);
+    if (i === start) break;
+  }
+  ids.reverse();
+  const path = [];
+  for (let k = 0; k < ids.length; k++) {
+    const i = ids[k];
+    if (
+      k === 0 ||
+      k === ids.length - 1 ||
+      k % 6 === 0 ||
+      ids[k] - ids[k - 1] !== ids[k + 1] - ids[k]
+    )
+      path.push([i % W, Math.floor(i / W)]);
+  }
+  return path;
+}
+export function routeRegion(w, from, to) {
+  const mesh = w.geography.mesh,
+    n = mesh.points.length,
+    start = closestCell(w, mesh, from),
+    goal = closestCell(w, mesh, to),
+    cost = new Float64Array(n).fill(Infinity),
+    prev = new Int32Array(n).fill(-1),
+    heap = new MinHeap();
+  if (start < 0 || goal < 0) return fineRoute(w, from, to);
+  cost[start] = 0;
+  heap.push(start, 0);
+  let visits = 0;
+  while (heap.length && visits++ < n * 8) {
+    const { id, cost: priority } = heap.pop();
+    if (
+      priority >
+      cost[id] + Math.hypot(mesh.points[id][0] - to[0], mesh.points[id][1] - to[1]) * 0.5 + 0.001
+    )
+      continue;
+    if (id === goal) break;
+    for (const next of mesh.neighbors[id]) {
+      const a = mesh.points[id],
+        b = mesh.points[next],
+        d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      let water = 0,
+        lake = 0,
+        mountain = false;
+      for (let k = 0; k <= Math.ceil(d); k++) {
+        const t = k / Math.ceil(d),
+          x = Math.max(0, Math.min(W - 1, Math.round(a[0] + (b[0] - a[0]) * t))),
+          y = Math.max(0, Math.min(H - 1, Math.round(a[1] + (b[1] - a[1]) * t))),
+          tile = (w.tiles || w.naturalTiles)[y * W + x];
+        if (tile === 4) water++;
+        if (tile === 2) lake++;
+        if (tile === 17 || w.roadObstacles?.[y * W + x]) mountain = true;
+      }
+      if (lake > 2 || mountain) continue;
+      const i = Math.round(b[1]) * W + Math.round(b[0]),
+        reuse = w.roadMask?.[i] || w.routeConnections?.has(id + ':' + next),
+        habitability = hab[mesh.biomes[next]] || 4,
+        height = 1 + Math.max(mesh.height[next] - 25, 25) / 25,
+        slope = 1 + Math.abs(mesh.height[next] - mesh.height[id]) * 0.12,
+        edge =
+          d * (1 + (100 - habitability) / 1000) * height * slope * (reuse ? 0.5 : 1) + water * 22,
+        c = cost[id] + edge;
+      if (c < cost[next]) {
+        cost[next] = c;
+        prev[next] = id;
+        heap.push(next, c + Math.hypot(b[0] - to[0], b[1] - to[1]) * 0.5);
+      }
+    }
+  }
+  if (!Number.isFinite(cost[goal])) return fineRoute(w, from, to);
+  const cells = [];
+  for (let i = goal; i >= 0; i = prev[i]) {
+    cells.push(i);
+    if (i === start) break;
+  }
+  cells.reverse();
+  w.routeConnections ??= new Set();
+  for (let i = 1; i < cells.length; i++) {
+    w.routeConnections.add(cells[i - 1] + ':' + cells[i]);
+    w.routeConnections.add(cells[i] + ':' + cells[i - 1]);
+  }
+  return [from, ...cells.map((i) => mesh.points[i]), to];
+}
+export function paintNaturalRoad(w, points, paint) {
+  const obstacles = new Uint8Array(W * H);
+  if (w.frontierRegions)
+    for (let y = 1; y < H - 1; y++)
+      for (let x = 1; x < W - 1; x++) if (roadForbidden(w, x, y)) obstacles[y * W + x] = 1;
+  if (!w.allowForestTrail)
+    for (const z of (w.places || []).filter((z) => z.forestCamp))
+      for (let y = Math.max(1, z.y - 36); y <= Math.min(H - 2, z.y + 36); y++)
+        for (let x = Math.max(1, z.x - 36); x <= Math.min(W - 2, z.x + 36); x++)
+          if (Math.hypot(x - z.x, y - z.y) < 36) obstacles[y * W + x] = 1;
+  for (const b of w.buildings || []) {
+    if (['stall', 'cityFlag', 'statue'].includes(b.type)) continue;
+    const pad = ['wall', 'tower'].includes(b.type) ? 0 : 2;
+    for (let y = Math.max(1, b.y - pad); y < Math.min(H - 1, b.y + b.h + pad); y++)
+      for (let x = Math.max(1, b.x - pad); x < Math.min(W - 1, b.x + b.w + pad); x++)
+        obstacles[y * W + x] = 1;
+  }
+  w.roadObstacles = obstacles;
+  const route = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const path = routeRegion(w, points[i - 1], points[i]);
+    if (!path)
+      throw new Error('No land route ' + w.seed + ' ' + points[i - 1] + ' -> ' + points[i]);
+    route.push(...path.slice(1));
+  }
+  paint(route);
+  delete w.roadObstacles;
+  return route;
+}
+export function generateRegionalRoads(w, paint, r) {
+  const nodes = [
+      ...w.cities,
+      ...w.places.filter(
+        (z) =>
+          ![
+            'cathedral',
+            'oak',
+            'salt',
+            'north',
+            'lake',
+            'grove',
+            ...(w.generatorVersion >= 12 ? ['red', 'ash', 'thorn'] : []),
+          ].includes(z.id),
+      ),
+    ],
+    positions = nodes.map((z) => [z.x, z.y]),
+    edges = urquhartEdges(positions);
+  w.mainRoads = [];
+  w.regionRoutes = [];
+  for (const [a, b] of edges) {
+    const route = paintNaturalRoad(w, [positions[a], positions[b]], paint);
+    w.regionRoutes.push({ from: nodes[a].id, to: nodes[b].id, points: route });
+    if (a < 3 || b < 3) w.mainRoads.push(route);
+  }
+  // Verify that the triangulated settlement graph reaches every destination.
+  const reachable = new Set([0]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [a, b] of edges)
+      if (reachable.has(a) !== reachable.has(b)) {
+        reachable.add(a);
+        reachable.add(b);
+        changed = true;
+      }
+  }
+  if (reachable.size !== nodes.length) throw new Error('Disconnected Urquhart graph');
+  const church = w.places.find((z) => z.id === 'cathedral'),
+    segments = w.roads.flatMap((route) => route.slice(1).map((b, i) => [route[i], b]));
+  let site;
+  for (let attempt = 0; attempt < 12000; attempt++) {
+    const x = 45 + Math.floor(r() * (w.generatorVersion >= 12 ? W - 90 : 630)),
+      y = 45 + Math.floor(r() * (w.generatorVersion >= 12 ? H - 90 : 510));
+    if (w.generatorVersion >= 12 && frontierContains(w, x, y, 65)) continue;
+    if (
+      nodes.some((z) => Math.hypot(z.x - x, z.y - y) < z.r + 60) ||
+      w.cities.some((z) => Math.abs(z.x - x) < z.rx + 60 && Math.abs(z.y - y) < z.ry + 60)
+    )
+      continue;
+    let dry = true;
+    for (let yy = y - 25; yy <= y + 25 && dry; yy += 2)
+      for (let xx = x - 28; xx <= x + 28; xx += 2)
+        if ([2, 4].includes(w.tile(xx, yy))) {
+          dry = false;
+          break;
+        }
+    if (!dry) continue;
+    let near,
+      dist = Infinity;
+    for (const [a, b] of segments) {
+      const d = segmentDistance(x, y, a, b);
+      if (d < dist) {
+        dist = d;
+        const dx = b[0] - a[0],
+          dy = b[1] - a[1],
+          t = Math.max(
+            0,
+            Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy || 1)),
+          );
+        near = [a[0] + t * dx, a[1] + t * dy];
+      }
+    }
+    if (dist > 45 && dist < 95) {
+      site = { x, y, near };
+      break;
+    }
+  }
+  if (!site) throw new Error('No detached sanctuary site ' + w.seed);
+  Object.assign(church, { x: site.x, y: site.y, r: 34 });
+  const side = site.near[0] > site.x ? 1 : -1,
+    entrance = [site.x, site.y + 27],
+    approach = [site.x + side * 34, site.y + 30];
+  w.cathedralRoad = paintNaturalRoad(
+    w,
+    [site.near, approach, entrance, [site.x, site.y + 22]],
+    paint,
+  );
+  const roadside = w.mainRoads
+    .flat()
+    .filter(
+      (p) =>
+        w.cities.every((z) => Math.hypot(p[0] - z.x, p[1] - z.y) > z.r + 20) &&
+        w.tile(p[0], p[1]) === 1,
+    );
+  for (let i = 0; i < 3; i++) {
+    const p = roadside[Math.floor((roadside.length * (i + 0.5)) / 3)];
+    if (!p) throw new Error('No rural road territory ' + w.seed);
+    Object.assign(w.territories[i], point(...p));
+  }
+  const camp = w.places.find((z) => z.id === 'thorn');
+  Object.assign(w.territories[3], point(camp.x, camp.y));
+  // Roads added by later systems use the same terrain costs, rather than straight
+  // lines through lakes or a new pass across the cathedral courtyard.
+  w.paintRoad = (points) => paintNaturalRoad(w, [points[0], points.at(-1)], paint);
+  if (w.generatorVersion >= 12) placeForestCamps(w, r, paintNaturalRoad);
+}

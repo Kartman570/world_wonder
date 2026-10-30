@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>PNG-characters · 8 directions</title
+  ><link rel="stylesheet" href="../../src/ui/game.css" /><style>
+    body {
+      overflow: auto;
+      background: #1b2b23;
+      color: #e2d6b5;
+      padding: 28px;
+    }
+    main {
+      max-width: 1280px;
+      margin: auto;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      margin: 20px 0;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      border: 1px solid #b5a47555;
+      background: #52624e;
+    }
+    select {
+      padding: 10px;
+      background: #263b30;
+      color: #e2d6b5;
+    }
+    #status {
+      min-height: 24px;
+      color: #c3cbb7;
+    }
+  </style>
+  <main>
+    <div class="eyebrow">SPRITE PNG-PREVIEW</div>
+    <h1>Eight Directions · walking and idle</h1>
+    <p>One PNG per character. Cell dimensions and frame counts come from the image and settings.</p>
+    <div class="toolbar">
+      <label
+        >Character
+        <select id="asset" aria-label="Character"></select></label
+      ><label
+        >Animation
+        <select id="clip" aria-label="Animation"></select></label
+      ><button id="motion">Stop Walking</button><button id="pause">Pause</button>
+    </div>
+    <p id="status">Loading…</p>
+    <canvas id="preview" width="1280" height="380"></canvas>
+    <p>
+      Crosses mark the feet coordinates. Top row: selected mode. Bottom row: idle pose. Views are
+      labeled with movement directions on screen.
+    </p>
+  </main>
+  <script type="module">
+    import { SpriteSheets } from '../../src/render/sprite-sheets.js';
+    const sheets = new SpriteSheets(),
+      canvas = document.querySelector('#preview'),
+      c = canvas.getContext('2d'),
+      select = document.querySelector('#asset'),
+      status = document.querySelector('#status'),
+      clipSelect = document.querySelector('#clip');
+    let clip = 'walk',
+      clipTime = 0;
+    let selected = 'city_guard',
+      moving = true,
+      paused = false,
+      time = 0,
+      last = performance.now(),
+      stillWalk = 0;
+    const actors = Array.from({ length: 16 }, (_, i) => ({ id: i, sprite: selected, dir: i % 8 }));
+    await sheets.ready;
+    for (const { id } of (sheets.manifest.catalog || []).filter(
+      (e) => e.spriteReady && e.type === 'character',
+    )) {
+      const o = document.createElement('option');
+      o.value = id;
+      o.textContent = id;
+      select.append(o);
+    }
+    await sheets.preload([selected]);
+    function metadata() {
+      const e = sheets.assets.get(selected),
+        g = e?.geometry;
+      clipSelect.replaceChildren();
+      const names = Object.keys(e?.config.animations || {});
+      if (!names.length) names.push('idle', 'walk');
+      for (const name of names) {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        clipSelect.append(option);
+      }
+      clip = names.includes(clip) ? clip : names[0];
+      clipSelect.value = clip;
+      status.textContent = g
+        ? e.config.file +
+          ' · ' +
+          e.image.width +
+          '×' +
+          e.image.height +
+          ' · cell ' +
+          g.frameWidth +
+          '×' +
+          g.frameHeight +
+          ' · frames ' +
+          g.frames +
+          ' · ' +
+          (e.config.animations?.[clip]?.fps ?? g.fps) +
+          ' fps · clip ' +
+          clip
+        : e?.error || 'Could not load sprites';
+    }
+    metadata();
+    clipSelect.onchange = () => {
+      clip = clipSelect.value;
+      clipTime = time;
+      metadata();
+    };
+    select.onchange = async () => {
+      selected = select.value;
+      for (const a of actors) a.sprite = selected;
+      status.textContent = 'Loading…';
+      await sheets.preload([selected]);
+      clipTime = time;
+      metadata();
+    };
+    document.querySelector('#motion').onclick = (e) => {
+      stillWalk = time * 5;
+      moving = !moving;
+      e.target.textContent = moving ? 'Stop Walking' : 'Start Walking';
+    };
+    document.querySelector('#pause').onclick = (e) => {
+      paused = !paused;
+      e.target.textContent = paused ? 'Resume' : 'Pause';
+    };
+    function draw(now) {
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      if (!paused) time += dt;
+      c.fillStyle = '#52624e';
+      c.fillRect(0, 0, 1280, 380);
+      c.font = '14px system-ui';
+      c.textAlign = 'center';
+      const labels = ['E →', 'SE ↘', 'S ↓', 'SW ↙', 'W ←', 'NW ↖', 'N ↑', 'NE ↗'];
+      for (let i = 0; i < 16; i++) {
+        const x = 80 + (i % 8) * 160,
+          y = i < 8 ? 164 : 338;
+        c.strokeStyle = '#b7bc9966';
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(x - 12, y);
+        c.lineTo(x + 12, y);
+        c.moveTo(x, y - 7);
+        c.lineTo(x, y + 7);
+        c.stroke();
+        sheets.draw(
+          c,
+          actors[i],
+          {
+            x,
+            y,
+            walk: i < 8 ? (moving ? time * 5 : stillWalk) : 0,
+            dir: i % 8,
+            animation: i < 8 && moving ? clip : 'idle',
+            animationToken: clipTime,
+            animationSeconds: time - clipTime,
+          },
+          time,
+        );
+        c.fillStyle = '#e6ddc4';
+        c.fillText(labels[i % 8], x, y + 24);
+      }
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  </script>
+</html>

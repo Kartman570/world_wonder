@@ -1,64 +1,62 @@
-# Земля и материалы ландшафта
+# Terrain and landscape materials
 
-`3d/` — исходники Blender и воспроизводимый генератор `build_terrain.py`.
-`sprites/` — финальные PNG и единственный манифест материалов поверхности.
+`3d/` contains Blender sources and the reproducible `build_terrain.py` generator.
+`sprites/` contains final PNGs and the single terrain-material manifest.
 
-14 материалов, по два варианта 512×512 RGB: grass, dry_grass, forest, soil, mud,
-sand, gravel, paving, cave, catacomb, alien, snow, water, boards.
-В готовой игре Blender не нужен. Сторонних текстур/моделей нет.
+There are 14 materials, each with two 512×512 RGB variants: grass, dry_grass, forest,
+soil, mud, sand, gravel, paving, cave, catacomb, alien, snow, water and boards.
+Blender is unnecessary at runtime. No third-party textures or models are used.
 
-## Генерация
+## Generation
 
 ```sh
 /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
   --python graphics/terrain/3d/build_terrain.py
 ```
 
-На другой ОС заменить путь на свой `blender`. Для отдельных материалов добавить
-`-- paving catacomb`. Нужен Blender с Cycles, проверено на Blender 5.2.3 LTS.
-Генератор не открывает и не меняет рабочую сцену художника: отдельный фоновый процесс.
-В каждом `.blend` сохранён вариант 0; вариант 1 точно воспроизводится тем же скриптом.
+On another OS, substitute your `blender` executable. Append `-- paving catacomb` to generate
+selected materials. Cycles is required; tested with Blender 5.2.3 LTS. The generator runs
+in a separate background process and does not change the artist's working scene.
+Each `.blend` stores variant 0; the same script reproduces variant 1.
 
-Материалы используют периодический 4D-шум на тороидальных координатах UV,
-мелкую геометрию травинок, листьев и камней, скруглённые каменные плиты.
-Камера ортографическая и смотрит строго сверху. Видимая область — 4×4 м;
-плоскость 12×12 м и 3×3 повторы геометрии вокруг кадра нужны для освещения без швов.
-Это обязательный запас: рендер ровно по краю плоскости даёт светлые полосы при повторе.
-Направление света, гамма и спокойная палитра общие со стилистикой спрайтов.
+Materials use periodic 4D noise on toroidal UV coordinates, small grass/leaf/stone geometry
+and beveled paving slabs. The orthographic camera looks straight down over a 4×4 m area.
+A 12×12 m plane and 3×3 geometry repetitions beyond the frame prevent lighting seams.
+This margin is required: rendering at the plane boundary produces bright tiled stripes.
+Lighting direction, gamma and restrained palettes match the character sprites.
 
-## Контракт PNG
+## PNG contract
 
-Каждая запись `sprites/manifest.json` содержит два относительных `files` и `worldPeriod`:
-период повторения в мировых пикселях, независимо от разрешения PNG.
-Для обычных материалов он равен 384; мостовая мельче — 192.
-Не увеличивать контраст отдельных камней до шахматной доски. У исходного PNG
-нет направления, анимации, якоря или прозрачного фона: он заполняет всю площадь.
-У нового материала должны совпадать края, масштаб деталей, экспозиция и свет.
-Результат оценивать и на повторе 3×3, и рядом с персонажем, а не только крупным планом.
+Each `sprites/manifest.json` entry contains two relative `files` and `worldPeriod`, the
+repeat period in world pixels regardless of PNG resolution. Most materials use 384;
+paving uses 192. Avoid checkerboard contrast between individual stones.
 
-## Сборка в игре
+A terrain PNG has no direction, animation, anchor or transparent border: it fills its
+entire square. New materials must match at their edges and share detail scale, exposure
+and lighting. Review both a 3×3 repeat and the material beside a character.
 
-`terrain-textures.js` выбирает материал по логическому тайлу, биому и глубине леса,
-добавляет крупные связные пятна и смешивает соседние материалы по шумовой маске.
-Оба варианта смешиваются в мировых координатах, независимо от границ участков.
-Маски имеют запас в один пиксель с каждой стороны: их интерполяция не создаёт швы чанков.
+## Runtime composition
 
-`terrain-worker.js` и `terrain-chunks.js` собирают землю в фоне через OffscreenCanvas.
-В worker передаётся только локальная сетка 20×20 названий материалов, не весь мир.
-Изображения передаются назад как ImageBitmap и один раз копируются в Canvas кеша, после чего временный bitmap закрывается. Есть синхронный резерв для браузеров
-без Worker/OffscreenCanvas и прежняя процедурная графика при недоступных PNG.
+`src/render/terrain-textures.js` chooses materials by logical tile, biome and forest depth,
+adds broad coherent patches, and blends neighbors through a noise mask. Both variants
+blend in world coordinates independently of chunk boundaries. Masks include a one-pixel
+border so interpolation does not produce chunk seams.
 
-`render-assets.js` хранит готовые участки 16×16 игровых клеток. Память кеша ограничена
-64 МиБ; при отдалении используются три уровня разрешения. Видимые участки имеют
-приоритет над запасом за кадром. Начальный участок готовится до снятия загрузочного
-экрана, следующие — заранее вокруг камеры. Мелкие неподвижные детали входят в текстуры;
-каждый кадр анимируются только редкие слабые блики воды. Логика мира не меняется.
-Текстуры занимают 28 МиБ после декодирования; worker имеет собственные ссылки/копии.
+`src/render/terrain-worker.js` and `src/render/terrain-chunks.js` prepare terrain in the
+background with OffscreenCanvas. Only a local 20×20 material-name grid is sent to the
+worker. Results return as ImageBitmap, are copied once into cached canvases, then closed.
+A synchronous fallback supports browsers without Worker/OffscreenCanvas; procedural
+terrain remains available if PNGs cannot load.
 
-Проверка вида: `/terrain-preview.html`. Проверка в игре: `/index.html?start=oak`.
-F3 показывает время отрисовки земли, размер кеша и очередь подготовки.
+`src/render/render-assets.js` caches 16×16-tile chunks with a 64 MiB limit and three
+resolution levels when zoomed out. Visible chunks take priority over offscreen margins.
+The first chunk is prepared before the loading screen closes; subsequent chunks are
+prepared ahead of the camera. Small static detail is baked into textures; only sparse,
+faint water highlights animate each frame. World logic is unaffected.
+Decoded textures occupy 28 MiB; the worker has its own references/copies.
 
-Проверки:
+Visual preview: `/tools/previews/terrain-preview.html`. In-game preview: `/index.html?start=oak`.
+F3 shows terrain render time, cache size and preparation queue.
 
 ```sh
 node tests/terrain-textures.mjs

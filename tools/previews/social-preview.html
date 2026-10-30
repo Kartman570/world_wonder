@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Conversations and Memory — Preview</title
+  ><link rel="stylesheet" href="../../src/ui/game.css" /><style>
+    body {
+      overflow: auto;
+      background: #14221d;
+    }
+    main {
+      max-width: 860px;
+      margin: 30px auto;
+      padding: 24px;
+    }
+    #directions {
+      padding: 24px;
+      border: 1px solid #66725c;
+    }
+    #death-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000e;
+      overflow: auto;
+      padding: 7vh 15vw;
+    }
+    #death-overlay.hidden {
+      display: none;
+    }
+    #report {
+      max-width: 700px;
+      margin: auto;
+    }
+    #status {
+      color: #d3bb83;
+    }
+  </style>
+  <main>
+    <div class="eyebrow">SEPARATE TEST WORLD · NO SAVE</div>
+    <h1>Locals Know the Way</h1>
+    <div id="directions"></div>
+    <p>Test a real death with crime history and belongings held in town storage.</p>
+    <button class="action" id="death">Wolf Encounter (Test)</button>
+    <p id="status"></p>
+  </main>
+  <section id="death-overlay" class="hidden"><div id="report"></div></section>
+  <script type="module">
+    import { World } from '../../src/core/simulation.js';
+    import { renderCityGuide } from '../../src/gameplay/city-guide.js';
+    import { renderDeath } from '../../src/gameplay/mortality.js';
+    import { recordCrime } from '../../src/gameplay/law.js';
+    const w = new World('social-preview'),
+      z = w.cities[0],
+      e = w.entities.find((e) => e.role === 'citizen' && e.faction === z.id);
+    renderCityGuide(document.querySelector('#directions'), w, e);
+    document.querySelector('#death').onclick = () => {
+      w.player.inventory = { gold: 80, sword: 1 };
+      recordCrime(w, z.id, 'murder');
+      w.storages[z.id] = { gold: 40 };
+      w.time += 187;
+      w.killCounts.wolf = 2;
+      w.quests.push({ status: 'completed' });
+      const wolf = w.entities.find((e) => e.role === 'wolf');
+      w.onDeath = () => {
+        document.querySelector('#death-overlay').classList.remove('hidden');
+        renderDeath(document.querySelector('#report'), w, {
+          continueLife: () => {
+            w.deathReport.acknowledged = true;
+            document.querySelector('#death-overlay').classList.add('hidden');
+            document.querySelector('#status').textContent =
+              'New wanderer: generation ' +
+              w.life.generation +
+              '. Wanted: ' +
+              (w.cityMemory[z.id].active ? 'yes' : 'no') +
+              '. Items in town storage for this character: ' +
+              Object.keys(w.storages[z.id]).length +
+              '.';
+          },
+        });
+      };
+      w.die(w.player, wolf);
+    };
+  </script>
+</html>

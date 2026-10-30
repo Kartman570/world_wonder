@@ -1,14 +1,155 @@
 import assert from 'node:assert/strict';
-import {World,TILE} from '../simulation.js';
-import {startCampaign,campaignEvent,campaignWizard,campaignLesson,campaignTarget,updateCampaign,campaignSupplyOffer,campaignTrainingSupplies,CHAPTERS} from '../campaign.js';
-import {beginStrike,tickCombat} from '../combat.js';
-import {beginCraft,tickCraft} from '../crafts.js';
-import {claimContracts,contractOffers} from '../contracts.js';
-import {Expedition} from '../expedition.js';
-const w=new World('campaign-path'),p=w.player;assert.equal(w.campaign,undefined);assert.ok(startCampaign(w));assert.equal(campaignLesson(w).id,'welcome');assert.deepEqual({x:p.x,y:p.y},w.spawn);assert.ok(campaignTarget(w).name.includes('Софос'));campaignWizard(w);assert.equal(campaignLesson(w).id,'orientation');for(const kind of ['map','inventory','journal'])campaignEvent(w,'window',{kind});campaignEvent(w,'walk',{distance:160,run:true});assert.equal(campaignLesson(w).id,'library');campaignEvent(w,'window',{kind:'library'});assert.equal(campaignLesson(w).id,'library','H alone is not a real shelf visit');campaignEvent(w,'shelf');assert.equal(campaignLesson(w).id,'sword');
-function melee(moving){const e=w.entities.find(e=>e.role==='dummy'&&!!e.moving===moving);p.x=e.x-55;p.y=e.y;p.weapon='sword';p.equipment.melee='sword';p.weaponMode='melee';p.weaponDrawn=true;p.cooldown=0;p.drawUntil=0;w.rebuildSpatial();assert.ok(beginStrike(w,p,e,{weapon:'sword'}));tickCombat(w,p,.2);assert.equal(e.hp,e.maxHp);}
-melee(false);assert.equal(campaignLesson(w).id,'moving');melee(true);assert.equal(campaignLesson(w).id,'bow');const dummy=w.entities.find(e=>e.role==='dummy'&&!e.moving);p.x=dummy.x;p.y=dummy.y+150;p.weapon='bow';p.weaponMode='ranged';p.weaponDrawn=true;p.cooldown=0;w.rebuildSpatial();const arrows=p.inventory.arrow;assert.ok(beginStrike(w,p,dummy,{weapon:'bow'}));tickCombat(w,p,.2);assert.equal(p.inventory.arrow,arrows-1);for(let i=0;i<100&&w.projectiles.length;i++)w.updateProjectiles(.01);assert.equal(campaignLesson(w).id,'craft');assert.equal(p.inventory.arrow,arrows,'Training arrow is returned after a hit');assert.equal(dummy.hp,dummy.maxHp,'Arrows cannot kill a training dummy');p.weaponDrawn=false;p.action=null;assert.ok(beginCraft(w,'bandage').ok);for(let i=0;i<200&&p.action;i++)tickCraft(w,.1);updateCampaign(w);assert.equal(campaignLesson(w).id,'departure');campaignWizard(w);assert.equal(campaignLesson(w).id,'city');assert.equal(w.quest,true);
-const loaded=World.restore(w.save());assert.deepEqual(loaded.campaign,w.campaign);const city=loaded.cities.find(z=>z.id===loaded.campaign.city);Object.assign(loaded.player,{x:city.x*TILE,y:city.y*TILE,weaponDrawn:true});updateCampaign(loaded);assert.equal(campaignLesson(loaded).id,'city');loaded.player.weaponDrawn=false;updateCampaign(loaded);assert.equal(campaignLesson(loaded).id,'people');campaignEvent(loaded,'talk',{city:city.id});assert.equal(campaignLesson(loaded).id,'trade');const merchant=loaded.entities.find(e=>e.faction===city.id&&e.shopkeeper);const rule=(await import('../content.js')).TRADE[merchant.role],key=rule.sells.find(k=>merchant.inventory[k]>0);loaded.player.inventory.gold=1000;assert.ok(loaded.trade(merchant,key,true).ok);assert.equal(campaignLesson(loaded).id,'service');const offer=campaignSupplyOffer(loaded,city.id);assert.ok(contractOffers(loaded,city.id).some(q=>q.id===offer.id));loaded.acceptQuest(offer);loaded.player.inventory.herb=2;const quarter=loaded.entities.find(e=>e.role==='quartermaster'&&e.faction===city.id),herbs=loaded.warehouses[city.id].herb||0;assert.ok(claimContracts(loaded,quarter).length);assert.equal(loaded.warehouses[city.id].herb,herbs+2);updateCampaign(loaded);assert.equal(campaignLesson(loaded).id,'artifact');loaded.player.inventory.relic=1;updateCampaign(loaded);assert.equal(campaignLesson(loaded).id,'return');loaded.depositRelics();assert.equal(loaded.campaign.status,'completed');assert.equal(loaded.relicVault.relic,1);assert.equal(loaded.player.inventory.relic,0);assert.equal(campaignLesson(loaded),null);assert.equal(loaded.campaign.history.length,CHAPTERS.length);assert.equal(World.restore(loaded.save()).campaign.status,'completed');assert.equal(new World('campaign-path').campaign,undefined,'Ordinary regeneration never enables campaign');
-const shortcut=new World('campaign-shortcut');startCampaign(shortcut);shortcut.player.inventory.moonRelic=1;shortcut.depositRelics();assert.equal(shortcut.campaign.status,'completed','Any returned artifact ends the campaign without blocking open-world shortcuts');const expedition=new Expedition(new World('campaign-layers'));startCampaign(expedition.surface);expedition.surface.debugMode=true;const state=expedition.surface.campaign;assert.ok(expedition.enter(expedition.surface.dungeonEntrances[0].id,{debug:true}).ok);assert.equal(expedition.current.campaign,state);assert.equal(Expedition.restore(expedition.save()).current.campaign.status,'active');
-const supplies=new World('campaign-supplies');startCampaign(supplies);supplies.campaign.stage=CHAPTERS.findIndex(s=>s.id==='bow');const teacher=supplies.entities.find(e=>e.role==='wizard');Object.assign(supplies.player,{x:teacher.x,y:teacher.y});supplies.player.inventory.arrow=0;const stock=teacher.inventory.arrow;assert.ok(campaignTrainingSupplies(supplies).ok);assert.equal(supplies.player.inventory.arrow,8);assert.equal(teacher.inventory.arrow,stock-8);assert.equal(campaignTrainingSupplies(supplies).ok,false);assert.equal(startCampaign(supplies),false,'Cannot reset a campaign for free supplies');assert.equal(World.restore(new World('no-lessons').save()).campaign,undefined);const completed=loaded.campaign;loaded.die(loaded.player);assert.equal(loaded.campaign,completed);assert.equal(loaded.campaign.status,'completed');
-console.log('✓ Полная кампания: практические шаги, настоящее оружие/стрелы/ремесло/торговля/поставка, подсказки, сохранение, слои подземелий, финал с любой реликвией и чистый открытый мир без обучения');
+import { World, TILE } from '../src/core/simulation.js';
+import {
+  startCampaign,
+  campaignEvent,
+  campaignWizard,
+  campaignLesson,
+  campaignTarget,
+  updateCampaign,
+  campaignSupplyOffer,
+  campaignTrainingSupplies,
+  CHAPTERS,
+} from '../src/gameplay/campaign.js';
+import { beginStrike, tickCombat } from '../src/gameplay/combat.js';
+import { beginCraft, tickCraft } from '../src/gameplay/crafts.js';
+import { claimContracts, contractOffers } from '../src/gameplay/contracts.js';
+import { Expedition } from '../src/core/expedition.js';
+const w = new World('campaign-path'),
+  p = w.player;
+assert.equal(w.campaign, undefined);
+assert.ok(startCampaign(w));
+assert.equal(campaignLesson(w).id, 'welcome');
+assert.deepEqual({ x: p.x, y: p.y }, w.spawn);
+assert.ok(campaignTarget(w).name.includes('Sophos'));
+campaignWizard(w);
+assert.equal(campaignLesson(w).id, 'orientation');
+for (const kind of ['map', 'inventory', 'journal']) campaignEvent(w, 'window', { kind });
+campaignEvent(w, 'walk', { distance: 160, run: true });
+assert.equal(campaignLesson(w).id, 'library');
+campaignEvent(w, 'window', { kind: 'library' });
+assert.equal(campaignLesson(w).id, 'library', 'H alone is not a real shelf visit');
+campaignEvent(w, 'shelf');
+assert.equal(campaignLesson(w).id, 'sword');
+function melee(moving) {
+  const e = w.entities.find((e) => e.role === 'dummy' && !!e.moving === moving);
+  p.x = e.x - 55;
+  p.y = e.y;
+  p.weapon = 'sword';
+  p.equipment.melee = 'sword';
+  p.weaponMode = 'melee';
+  p.weaponDrawn = true;
+  p.cooldown = 0;
+  p.drawUntil = 0;
+  w.rebuildSpatial();
+  assert.ok(beginStrike(w, p, e, { weapon: 'sword' }));
+  tickCombat(w, p, 0.2);
+  assert.equal(e.hp, e.maxHp);
+}
+melee(false);
+assert.equal(campaignLesson(w).id, 'moving');
+melee(true);
+assert.equal(campaignLesson(w).id, 'bow');
+const dummy = w.entities.find((e) => e.role === 'dummy' && !e.moving);
+p.x = dummy.x;
+p.y = dummy.y + 150;
+p.weapon = 'bow';
+p.weaponMode = 'ranged';
+p.weaponDrawn = true;
+p.cooldown = 0;
+w.rebuildSpatial();
+const arrows = p.inventory.arrow;
+assert.ok(beginStrike(w, p, dummy, { weapon: 'bow' }));
+tickCombat(w, p, 0.2);
+assert.equal(p.inventory.arrow, arrows - 1);
+for (let i = 0; i < 100 && w.projectiles.length; i++) w.updateProjectiles(0.01);
+assert.equal(campaignLesson(w).id, 'craft');
+assert.equal(p.inventory.arrow, arrows, 'Training arrow is returned after a hit');
+assert.equal(dummy.hp, dummy.maxHp, 'Arrows cannot kill a training dummy');
+p.weaponDrawn = false;
+p.action = null;
+assert.ok(beginCraft(w, 'bandage').ok);
+for (let i = 0; i < 200 && p.action; i++) tickCraft(w, 0.1);
+updateCampaign(w);
+assert.equal(campaignLesson(w).id, 'departure');
+campaignWizard(w);
+assert.equal(campaignLesson(w).id, 'city');
+assert.equal(w.quest, true);
+const loaded = World.restore(w.save());
+assert.deepEqual(loaded.campaign, w.campaign);
+const city = loaded.cities.find((z) => z.id === loaded.campaign.city);
+Object.assign(loaded.player, { x: city.x * TILE, y: city.y * TILE, weaponDrawn: true });
+updateCampaign(loaded);
+assert.equal(campaignLesson(loaded).id, 'city');
+loaded.player.weaponDrawn = false;
+updateCampaign(loaded);
+assert.equal(campaignLesson(loaded).id, 'people');
+campaignEvent(loaded, 'talk', { city: city.id });
+assert.equal(campaignLesson(loaded).id, 'trade');
+const merchant = loaded.entities.find((e) => e.faction === city.id && e.shopkeeper);
+const rule = (await import('../src/core/content.js')).TRADE[merchant.role],
+  key = rule.sells.find((k) => merchant.inventory[k] > 0);
+loaded.player.inventory.gold = 1000;
+assert.ok(loaded.trade(merchant, key, true).ok);
+assert.equal(campaignLesson(loaded).id, 'service');
+const offer = campaignSupplyOffer(loaded, city.id);
+assert.ok(contractOffers(loaded, city.id).some((q) => q.id === offer.id));
+loaded.acceptQuest(offer);
+loaded.player.inventory.herb = 2;
+const quarter = loaded.entities.find((e) => e.role === 'quartermaster' && e.faction === city.id),
+  herbs = loaded.warehouses[city.id].herb || 0;
+assert.ok(claimContracts(loaded, quarter).length);
+assert.equal(loaded.warehouses[city.id].herb, herbs + 2);
+updateCampaign(loaded);
+assert.equal(campaignLesson(loaded).id, 'artifact');
+loaded.player.inventory.relic = 1;
+updateCampaign(loaded);
+assert.equal(campaignLesson(loaded).id, 'return');
+loaded.depositRelics();
+assert.equal(loaded.campaign.status, 'completed');
+assert.equal(loaded.relicVault.relic, 1);
+assert.equal(loaded.player.inventory.relic, 0);
+assert.equal(campaignLesson(loaded), null);
+assert.equal(loaded.campaign.history.length, CHAPTERS.length);
+assert.equal(World.restore(loaded.save()).campaign.status, 'completed');
+assert.equal(
+  new World('campaign-path').campaign,
+  undefined,
+  'Ordinary regeneration never enables campaign',
+);
+const shortcut = new World('campaign-shortcut');
+startCampaign(shortcut);
+shortcut.player.inventory.moonRelic = 1;
+shortcut.depositRelics();
+assert.equal(
+  shortcut.campaign.status,
+  'completed',
+  'Any returned artifact ends the campaign without blocking open-world shortcuts',
+);
+const expedition = new Expedition(new World('campaign-layers'));
+startCampaign(expedition.surface);
+expedition.surface.debugMode = true;
+const state = expedition.surface.campaign;
+assert.ok(expedition.enter(expedition.surface.dungeonEntrances[0].id, { debug: true }).ok);
+assert.equal(expedition.current.campaign, state);
+assert.equal(Expedition.restore(expedition.save()).current.campaign.status, 'active');
+const supplies = new World('campaign-supplies');
+startCampaign(supplies);
+supplies.campaign.stage = CHAPTERS.findIndex((s) => s.id === 'bow');
+const teacher = supplies.entities.find((e) => e.role === 'wizard');
+Object.assign(supplies.player, { x: teacher.x, y: teacher.y });
+supplies.player.inventory.arrow = 0;
+const stock = teacher.inventory.arrow;
+assert.ok(campaignTrainingSupplies(supplies).ok);
+assert.equal(supplies.player.inventory.arrow, 8);
+assert.equal(teacher.inventory.arrow, stock - 8);
+assert.equal(campaignTrainingSupplies(supplies).ok, false);
+assert.equal(startCampaign(supplies), false, 'Cannot reset a campaign for free supplies');
+assert.equal(World.restore(new World('no-lessons').save()).campaign, undefined);
+const completed = loaded.campaign;
+loaded.die(loaded.player);
+assert.equal(loaded.campaign, completed);
+assert.equal(loaded.campaign.status, 'completed');
+console.log(
+  '✓ Full campaign: practical steps, real weapons/arrows/crafting/trade/supplies, hints, saves, dungeon layers, any-relic ending and a clean open world without tutorials',
+);

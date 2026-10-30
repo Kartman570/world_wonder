@@ -1,0 +1,26 @@
+import { TerrainTextures } from './terrain-textures.js';
+const terrain = new TerrainTextures({ createCanvas: () => new OffscreenCanvas(1, 1) });
+self.onmessage = (event) => {
+  const job = event.data;
+  try {
+    if (job.type === 'init') {
+      terrain.materials = new Map(job.materials);
+      terrain.ready = true;
+      self.postMessage({ type: 'ready' });
+      return;
+    }
+    if (job.type === 'chunk') {
+      const size = 768,
+        scale = job.lod < 0 ? 0.25 : job.lod === 0 ? 0.5 : 1,
+        canvas = new OffscreenCanvas(size * scale, size * scale),
+        c = canvas.getContext('2d');
+      c.scale(scale, scale);
+      c.translate(-job.cx * size, -job.cy * size);
+      terrain.paint(c, null, job.cx, job.cy, job.grid);
+      const bitmap = canvas.transferToImageBitmap();
+      self.postMessage({ id: job.id, bitmap }, [bitmap]);
+    }
+  } catch (error) {
+    self.postMessage({ id: job.id, error: error.message });
+  }
+};

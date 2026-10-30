@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Campsite Preview</title
+  ><link rel="stylesheet" href="../../src/ui/game.css" /><style>
+    body {
+      overflow: auto;
+      background: #415840;
+    }
+    header {
+      pointer-events: auto;
+      position: static;
+      padding: 20px;
+      display: block;
+    }
+    h1 {
+      font: 30px Georgia;
+      margin: 0 0 8px;
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(500px, 1.5fr);
+      gap: 20px;
+      padding: 0 20px 20px;
+    }
+    canvas {
+      width: 100%;
+      background: #6c7958;
+    }
+    .modal-card {
+      width: 100%;
+      max-height: 78vh;
+    }
+    #message {
+      padding: 12px;
+      color: #e1cd9d;
+    }
+    nav button {
+      padding: 9px;
+      margin: 8px 8px 8px 0;
+    }
+    @media (max-width: 800px) {
+      main {
+        display: block;
+      }
+    }
+  </style>
+  <header>
+    <h1>Field Camp</h1>
+    <p>
+      A separate test of real game components with test supplies. Your journey save is unaffected.
+    </p>
+    <nav>
+      <button id="camp">Camp and Chest</button><button id="craft">Campfire Crafting</button>
+    </nav>
+    <div id="message"></div>
+  </header>
+  <main>
+    <canvas id="scene" width="420" height="420"></canvas>
+    <section class="modal-card"><div id="panel"></div></section>
+  </main>
+  <script type="module">
+    import { World, TILE } from '../../src/core/simulation.js';
+    import { deployCamp, tickCraft } from '../../src/gameplay/crafts.js';
+    import { renderCampPanel, renderCraftPanel } from '../../src/ui/adventure-ui.js';
+    import { drawCamp } from '../../src/render/adventure-render.js';
+    import { drawCharacter } from '../../src/render/character-sprites.js';
+    const w = new World('camp-preview'),
+      p = w.player;
+    w.entities = [];
+    w.corpses = [];
+    w.rebuildSpatial();
+    let placed;
+    for (let y = 20; y < 450 && !placed; y += 10)
+      for (let x = 20; x < 620 && !placed; x += 10) {
+        Object.assign(p, { x: x * TILE, y: y * TILE, weaponDrawn: false });
+        placed = deployCamp(w).camp;
+      }
+    p.inventory = { ration: 4, log: 5, cloth: 2, grain: 3, flour: 2, honey: 2, wax: 1, meat: 2 };
+    p.hp = 55;
+    w.rebuildSpatial();
+    const camp = w.camps[0],
+      root = document.querySelector('#panel'),
+      message = document.querySelector('#message'),
+      canvas = document.querySelector('canvas'),
+      c = canvas.getContext('2d');
+    const options = {
+      changed: () => {},
+      notify: (text) => (message.textContent = text),
+      close: () => {
+        root.replaceChildren();
+        const text = document.createElement('p');
+        text.textContent = p.action
+          ? 'The action is taking place in the game world…'
+          : 'Window closed.';
+        root.append(text);
+      },
+    };
+    document.querySelector('#camp').onclick = () => renderCampPanel(root, w, camp, options);
+    document.querySelector('#craft').onclick = () => renderCraftPanel(root, w, options);
+    renderCampPanel(root, w, camp, options);
+    w.onAction = () => renderCampPanel(root, w, camp, options);
+    let last = 0;
+    function frame(time) {
+      const dt = Math.min(0.05, (time - last) / 1000 || 0.016);
+      last = time;
+      w.time += dt * 0.65;
+      tickCraft(w, dt);
+      c.fillStyle = '#71825b';
+      c.fillRect(0, 0, 420, 420);
+      c.save();
+      c.translate(210 - p.x, 230 - p.y);
+      if (w.camps.includes(camp)) drawCamp(c, camp, w.time);
+      drawCharacter(c, p, p, { player: true });
+      c.restore();
+      c.fillStyle = '#eee1bb';
+      c.font = '14px system-ui';
+      c.fillText('Health: ' + Math.ceil(p.hp) + '/100', 20, 35);
+      c.fillText('Stamina: ' + Math.ceil(p.stamina) + '/300', 20, 59);
+      if (p.action) c.fillText('Remaining: ' + Math.ceil(p.action.remaining) + ' sec.', 20, 83);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  </script>
+</html>

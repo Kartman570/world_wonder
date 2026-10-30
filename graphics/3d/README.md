@@ -1,184 +1,256 @@
-# Исходники графики
+# Graphics sources
 
-Каждый объект хранится в собственной папке: `<id>/<id>.blend` и `build.py` (или его прежние скрипты).
-Общая геометрия и анимационная логика — `_shared/`; пустая студия — `_template/`.
-Экспорт: `_shared/render_8_directions.py`; он находит корень 3d и пишет в соседний sprites.
-Единственный источник очереди и готовности — `../sprites/manifest.json`, раздел catalog.
-Продолжение: выбрать первый объект с directions > 1, у которого нет spriteReady или нужных ready-клипов.
-Завершать объект целиком и обновлять его запись ДО перехода к следующему. Git-коммиты не делать.
-Плотность всех моделей: 128 / 4.2 = 30.476190476 пикселя на Blender-единицу.
-Большое число клипов не является основанием снижать плотность; увеличивать бюджет и высоту PNG.
-Инопланетные модели сверять с `../character descriptions/`; земные профессии и животные — реальные.
+Each object has its own `<id>/<id>.blend` and `build.py` (or earlier object-specific scripts).
+Shared geometry and animation logic live in `_shared/`; `_template/` provides an empty studio.
+`_shared/render_8_directions.py` locates the 3d root and exports into the adjacent sprites directory.
+The only production queue and readiness source is `../sprites/manifest.json`, under `catalog`.
+Complete an object and update its entry before moving on. Do not make Git commits.
 
+All models use **128 / 4.2 = 30.476190476 pixels per Blender unit**. More clips are not a
+reason to lower density: increase explicit memory/atlas budgets instead. Check alien models
+against their catalog art briefs and notes; terrestrial professions and animals follow real anatomy.
 
-## Рисующему агенту: начни здесь
+## Artist: start here
 
-Твоя задача — модель, материалы и качественные анимации. Технический экспорт уже готов. Не нужно вручную собирать лист, переставлять направления, вычислять anchor, оптимизировать PNG или править код игры.
+Your task is modeling, materials and quality animation. The exporter handles sheet assembly,
+direction ordering, anchor calculation, PNG optimization and game metadata.
 
-1. Скопируй `_template/sprite_template.blend` в новую папку `<id>/<id>.blend`. В `city_guard/city_guard.blend` есть готовый пример персонажа и ходьбы. Исходные меши и ключи сохранены.
-2. Работай в сцене `SPRITE_TEMPLATE`, коллекции `ASSET • replace with your character`. `RENDER_RIG` содержит камеру и свет: их сохраняй. Персонаж смотрит в **−Y**, земля **Z=0**, точка стоп **(0,0,0)**. Все клипы — на месте, без перемещения корня: ходьбой управляет игра.
-3. Анимируй в общей временной шкале любым способом: armature, ключи объектов, NLA. Экспортёр снимает итоговую оценённую сцену. Использование имён Actions само по себе не выбирает анимацию: размести нужные действия в диапазонах timeline. Метки `CLIP_*` — ориентиры, не автоматические границы клипов.
-4. Отредактируй JSON в custom property сцены **`sprite_export_json`**. Пример со всеми основными клипами — `_template/character.export.example.json`. Укажи реальные диапазоны кадров. Отсутствующий клип просто убери; не выдавай неподвижную позу за готовую атаку или работу.
-5. В Text Editor запусти `render_8_directions.py` (Alt+P). Либо выполни команду ниже. Экспортёр выдаст PNG, проверит бюджет текстуры и обновит единственную запись в корневом manifest.json.
-6. Открой `/sprite-preview.html`: проверь **каждый клип**, все восемь направлений, стопы, концы оружия и последнюю позу смерти. Если части модели обрезаются — увеличь охват камеры и повтори экспорт. Ошибку границ нельзя скрывать обрезанием оружия.
+1. Copy `_template/sprite_template.blend` to `<id>/<id>.blend`. The city guard source is a
+   finished character/walking example with meshes and keys preserved.
+2. Work in scene `SPRITE_TEMPLATE`, collection `ASSET • replace with your character`.
+   Preserve the camera and lights in `RENDER_RIG`. Characters face **−Y**, ground is **Z=0**,
+   and feet anchor at **(0,0,0)**. All clips stay in place; the engine moves the character.
+3. Animate on a shared timeline using armatures, object keys or NLA. Export captures the
+   evaluated scene. Action names alone do not choose animations: place actions in timeline
+   ranges. `CLIP_*` markers are guides, not automatic clip boundaries.
+4. Edit scene custom property **`sprite_export_json`**. See
+   `_template/character.export.example.json`. Enter actual frame ranges; omit unfinished
+   clips rather than presenting a still pose as a completed attack or work animation.
+5. Run `render_8_directions.py` in the Text Editor with Alt+P, or use the command below.
+   Export creates the PNG, validates texture budgets and updates the single catalog entry.
+6. In `/tools/previews/sprite-preview.html`, inspect **every clip**, all eight directions,
+   feet, weapon tips and final death pose. Increase camera coverage and re-export if anything
+   clips; never hide a bounds error by cutting off a weapon.
 
-Результат для игры: **один PNG на модель + запись catalog в общем manifest.json**. Результат для дальнейшей работы: `.blend` в этой папке. Промежуточные кадры и тяжёлые исходники в `graphics/sprites` не клади. Модели разных профессий могут иметь совершенно разные числа, длительности и названия клипов.
+Runtime delivery is **one PNG per model plus its catalog entry**. Keep the `.blend` for later
+editing. Do not place intermediate frames or heavy sources in `graphics/sprites`.
+Professions can have different clip names, counts and durations.
 
-## Конфигурация и запуск
+## Configuration and execution
 
-Из корня репозитория, если `blender` есть в PATH:
+From the repository root, with `blender` on PATH:
 
 ```sh
 blender --background graphics/3d/my_character/my_character.blend --python graphics/3d/_shared/render_8_directions.py
 ```
 
-Для отдельного JSON вместо сохранённой настройки сцены:
+To override the saved scene configuration:
 
 ```sh
 blender --background graphics/3d/my_character/my_character.blend --python graphics/3d/_shared/render_8_directions.py -- graphics/3d/my_character/export.json
 ```
 
-На macOS исполняемый файл обычно `/Applications/Blender.app/Contents/MacOS/Blender`. Браузеру и игрокам Blender не нужен. Экспорт использует только Python и numpy, уже входящие в Blender; Pillow, ImageMagick и отдельные пакеты не нужны.
+On macOS, the executable is usually `/Applications/Blender.app/Contents/MacOS/Blender`.
+Players do not need Blender. Export uses Blender's bundled Python and numpy; Pillow,
+ImageMagick and separate packages are unnecessary.
 
-Основные поля JSON:
+Main JSON fields:
 
-- `asset`: id объекта из catalog, например `city_guard`; это же имя его папки и PNG. Отдельный id для готового ассета не нужен.
-- `outputSize`: размер квадратного кадра **до** обрезки общих полей, обычно 128. Оставь рендер 256×256: экспорт уменьшает его с корректной обработкой прозрачности. Для высокого или крупного существа можно увеличить размер/охват камеры; разрешение рендера должно делиться на outputSize. Это не размер модели в мире.
-- `scale`: игровые пиксели на пиксель готовой текстуры, для текущего стиля 4.2 / 3.25 = 1.2923076923. Плотность всех персонажей — 128 / 4.2 = 30.476190476 пикселя на Blender-единицу. Число анимаций не должно влиять на плотность.
-- `crop:true`: общий прямоугольник всех поз и направлений; автоматический пересчёт anchor. Кадры могут стать **прямоугольными**, например 80×112. Разные кадры не обрезаются независимо — персонаж не дрожит.
-- `clips`: словарь с любыми именами. В каждом: `start` (кадр Blender), `frames` (сколько снимков), `step` (шаг Blender, по умолчанию 1), `fps` (скорость воспроизведения в игре), `loop`. Либо `samples:[1,3,5.5,...]` для явного набора кадров. `enabled:false` исключает незавершённый клип.
-- Экспорт всегда записывает PNG и технические параметры прямо в catalog корневого manifest.json, отмечает spriteReady и ready у клипов. `publish:true` дополнительно подключает модель к игровым ролям, сохраняя остальные модели и связи. `roles:["guard"]` / `races:[...]` по желанию добавляют привязки; **не перехватывай роли чужих моделей без договорённости**.
-- `output`: необязательный каталог вывода. По умолчанию соседний `graphics/sprites`.
-- `maxDecodedBytes`: бюджет одной модели, по умолчанию 16 МиБ. При превышении экспорт останавливается; убери избыточные кадры или увеличь явный бюджет. Плотность пикселей одинаковых по размеру персонажей должна сохраняться. По умолчанию сторона атласа ограничена 8192 px, временный буфер до обрезки — 64 МиБ. Для длинного листа с сохранением плотности можно явно увеличить maxAtlasSide и maxWorkingBytes в конфигурации.
+- `asset`: catalog ID, for example `city_guard`; also the folder/PNG identity. No second
+  completed-asset ID is needed.
+- `outputSize`: square frame size **before** common cropping, usually 128. Keep rendering
+  at 256×256 for alpha-aware downsampling. Large/tall creatures may need a larger size and
+  camera coverage. Render resolution must divide evenly by outputSize. This is not world size.
+- `scale`: game pixels per final texture pixel; current style uses
+  `4.2 / 3.25 = 1.2923076923`. Preserve the common source density above regardless of clip count.
+- `crop:true`: one shared rectangle across all views and poses, with automatic anchor
+  recalculation. Cells may become rectangular, e.g. 80×112. Never crop frames independently.
+- `clips`: arbitrary names with `start` (Blender frame), `frames` (sample count), `step`
+  (Blender-frame step, default 1), `fps` (game playback speed), and `loop`. Alternatively use
+  `samples:[1,3,5.5,...]`. `enabled:false` excludes an unfinished clip.
+- Export writes PNG metadata and readiness directly into the root catalog. `publish:true`
+  also connects game roles while preserving other entries. Optional `roles:["guard"]` /
+  `races:[...]` add bindings; **do not take over another model's roles without agreement**.
+- `output`: optional output directory, defaulting to adjacent `graphics/sprites`.
+- `maxDecodedBytes`: per-model budget, default 16 MiB. Export stops on overflow: remove
+  redundant frames or explicitly raise the budget while preserving density. Defaults are
+  8192 px per atlas side and 64 MiB for the uncropped working buffer. Increase `maxAtlasSide`
+  and `maxWorkingBytes` explicitly for longer sheets.
 
-У текущего стража готовы пять клипов: idle (20–23), walk (2–13), run (40–47), attack (60–67), death (80–89). Замыкающие ключи idle=24, walk=14, run=48 в PNG повторно не включаются. Точные FPS и диапазоны экспорта заданы в sprite_export_json. Базовый шаблон содержит пустую сцену для модели, камеру и свет.
+Read current clip ranges/FPS from the scene's `sprite_export_json` and the root manifest.
+Closing loop keys are not exported twice. The base template contains an empty model scene,
+a camera and lights; model dimensions are not fixed for future characters.
 
-## Семантика в движке
+## Engine semantics
 
-`idle` — ожидание, `walk` — движение, `attack` — атака, `death` — смерть, `work` — профессиональное действие. `attack` и `death` по умолчанию не зациклены и останавливаются на последнем кадре; остальные цикличны. Для красивого idle обычно достаточно 2–4 кадров, walk 8–12, attack 4–8, death 6–10, work 6–10. Это рекомендации, не ограничения формата.
+Standard clips are `idle`, `walk`, `attack`, `death` and `work`. Attack/death default to
+nonlooping and stop on the final frame; others loop. Suggested frame counts are idle 2–4,
+walk 8–12, attack 4–8, death 6–10 and work 6–10. These are recommendations, not format limits.
 
-Движок выбирает движение, атаку, смерть и известные рабочие состояния автоматически, с откатом на прежнюю графику при отсутствии модели. В настройке экспорта можно добавить `states:{"praying":"pray","craftingGoods":"work"}` для дополнительных состояний профессий; экспортёр сохранит её в записи catalog. Для новых игровых действий код может передать `spriteAnimation` / `pose.animation` с любым именем клипа, `spriteAnimationToken` / `pose.animationToken` для перезапуска и `pose.animationSeconds` для точного времени. Экспортёр не придумывает игровые события для нового имени: пока событие не подключено, клип доступен в просмотрщике.
+Movement, attacks, death and known work states are selected automatically, with procedural
+fallbacks if a model is missing. Export configuration can map extra profession states with
+`states:{"praying":"pray","craftingGoods":"work"}`. For new actions, game code may supply
+`spriteAnimation` / `pose.animation`, a restart token in `spriteAnimationToken` /
+`pose.animationToken`, and exact time in `pose.animationSeconds`. New clip names do not
+create gameplay events automatically; until connected, they remain available in the viewer.
 
-У трупов сохраняется модель и направление погибшего; при наличии death проигрывается её анимация с момента смерти и остаётся последняя поза. У старых сохранений без этих полей остаётся прежнее изображение тела. Приоритет выбора модели: `персонаж.sprite → roles[role] → races[race]`.
+Corpses retain model and direction. Their death clip plays from death time and holds its
+last pose. Legacy saves lacking these fields retain the old body image.
+Model priority is `character.sprite → roles[role] → races[race]`.
 
-## Почему формат компактный
+## Compact export and loading
 
-Один атлас содержит только выбранные кадры, восемь направлений идут E, SE, S, SW, W, NW, N, NE. Общие прозрачные поля убираются; размер и точка привязки вычисляются автоматически. PNG использует адаптивные фильтры строк и lossless Deflate: оптимизация файла не добавляет потери. Существующая художественная обработка `sprite_postprocess` (сдержанная палитра и края) остаётся отдельно настраиваемой.
+One atlas contains only selected frames, ordered E, SE, S, SW, W, NW, N, NE. Common transparent
+margins are removed and anchors calculated automatically. PNG uses adaptive row filters and
+lossless Deflate. Artistic `sprite_postprocess` settings for restrained palettes/edges remain
+separately configurable.
 
-Экспортёр автоматически пишет размеры, клипы и SHA-256-версию в manifest. Версия меняет URL запроса при обновлении рисунка, поэтому браузер не берёт старый PNG из кеша. Движок подгружает ближайшие модели, декодирует максимум три PNG одновременно, разделяет одинаковые текстуры и освобождает неиспользуемые по бюджету памяти. Рабочая память зависит от распакованного размера, поэтому уменьшение прозрачных полей важнее дополнительного сжатия файла.
+The exporter writes dimensions, clips and a SHA-256 version into the manifest. Versioned URLs
+prevent stale art after updates. Runtime loads nearby models, decodes up to three PNGs at once,
+shares textures and evicts unused character textures under a memory budget. Decoded dimensions
+determine working memory; removing empty margins matters more than extra file compression.
 
-`render_8_directions.py` управляет Blender; `sprite_pipeline.py` собирает компактный атлас и метаданные; `configure_template.py` обновляет технические настройки и встроенные тексты, сохраняя геометрию и ключи. После изменения внешних экспортных скриптов обнови встроенные тексты через configure_template, иначе Alt+P использует старую копию. Генераторы `build_template.py` / `build_guard.py` вызывают configure_template сами; их повторный запуск пересобирает исходный объект, поэтому для художественной доработки используй сохранённый .blend.
-
-Технические проверки:
+`render_8_directions.py` controls Blender; `sprite_pipeline.py` packs the atlas and metadata;
+`configure_template.py` refreshes technical settings and embedded scripts while preserving
+geometry and keys. After editing external export scripts, refresh embedded copies with
+configure_template or Alt+P will still run the old copy. Template/guard generators call this
+automatically, but rerunning those generators rebuilds geometry: use the saved `.blend` for art edits.
 
 ```sh
 node tests/sprite-sheets.mjs
 blender --background --python tests/blender-sprite-pipeline.py
 ```
 
-Контрольные размеры меняются после работы художника; актуальная запись cityGuard находится в общем manifest.json. Тестовый робот удалён. Размеры не фиксированы для будущих моделей.
+## Production and validation
 
+`_shared/catalog.py next` selects the first unfinished object. Do not substitute generic hand
+motion for profession-specific work: tools and contact must match the clip description.
+Consult catalog descriptions for alien anatomy.
 
-## Последовательное производство
+New terrestrial characters use `_shared/humanoid.py` and one object-specific `build.py`.
+Detailed geometry/materials remain in `.blend`; low resolution applies at export.
+Check poses at quarter-frame intervals, and visually review intermediate phases, hand/tool
+contact and falling. Geometric results are saved in `clip_pose_validation`.
+For skirts/robes, `_shared/validate_cloth.py` checks legs against the evaluated garment surface
+and stores `cloth_validation`; use `validate_apron()` for aprons and `validate()` for long garments.
+`validate_grips.validate()` checks two-handed tools/marked handles and head clearance.
 
-`_shared/catalog.py next` показывает первый незавершённый объект. Не выдавай общую
-анимацию рук за специальную профессиональную работу: инструмент и контакт должны
-соответствовать описанию клипа. Инопланетян сверять с character descriptions.
+After review, `_shared/jobs.py:start_render()` renders poses sequentially, checks dimensions,
+hashes and cell coverage, then saves the source. Progress and contact sheets from
+`_shared/review.py` stay in system temp. Runtime sprites contain only the PNG and shared manifest.
+Continue with the next catalog entry; do not commit.
 
-Новые земные персонажи используют `_shared/humanoid.py` и один `<id>/build.py`.
-Геометрия и подробные материалы остаются в .blend; малое разрешение применяется
-при экспорте. Ключи поз проверяются через четверть кадра; дополнительно нужно
-визуально проверить промежуточные фазы, контакт рук с инструментом и падение.
-Результат геометрической проверки сохраняется в `clip_pose_validation`.
-Для длинной одежды `_shared/validate_cloth.py` дополнительно проверяет
-выход вершин ног сквозь оценённую поверхность юбки; результат — `cloth_validation`.
+Render settings: Cycles 48 samples, AgX, transparent background, 2× supersampling, restrained
+6-bit RGB postprocessing and 8 alpha levels. Typical frame/camera: 128×128 / 4.2; player:
+144×144 / 4.725, with identical density. Increase budgets rather than reducing frame size.
+Read authoritative sizes and ranges from the manifest/scene, not duplicated readiness lists.
 
-После проверки `_shared/jobs.py:start_render()` последовательно снимает все позы,
-проверяет размеры, hash и заполнение ячеек без обрезаний, сохраняет .blend.
-Прогресс и временные контактные листы `_shared/review.py` находятся только
-в системном temp. В sprites — один PNG на объект и общий manifest.json.
-Далее выбрать следующий объект по манифесту; git не коммитить.
+`catalog.py audit` checks PNGs, dimensions, hashes, contiguous clip rows, `.blend` presence and
+one runtime file per ready sprite. This validates a file checkpoint, not artistic quality.
+Shared-library fixes do not update already-baked `.blend` or PNG files.
 
-Рендер: Cycles 48 samples, AgX, прозрачный фон, 2× supersampling, сдержанная
-постобработка 6-bit RGB и 8 уровней alpha. Обычный кадр 128×128 до общей обрезки,
-камера 4.2. У игрока 144×144 / 4.725: плотность та же. Не уменьшать кадры ради
-большого числа клипов; увеличивать явные бюджеты памяти и высоту PNG.
-Все текущие размеры и диапазоны брать из манифеста и настройки сцены —
-не хранить в инструкции устаревающие копии готовности.
+## Species and object-specific sources
 
+Mounted models use `_shared/equine.py`; rider and unicorn phases must agree. Build `unicorn`
+before its dependent `nomad` / `nomad_archer` compositions. `validate_equine.validate()` checks
+cycle seams, ground, leg/body connections and eight-view bounds. For riders,
+`validate_mounted.validate()` checks pelvis/saddle, fingers/reins/string contact and weapon
+clearance from the mount. Also visually inspect seating and the combined death pose.
 
-Проверки продолжения: `_shared/catalog.py audit` сверяет реальные PNG, размеры,
-hash, непрерывность строк клипов, наличие .blend и один файл в папке каждого
-готового спрайта. Это проверка файловой контрольной точки, не художественной готовности.
-Для фартуков дополнительно запускать `validate_cloth.validate_apron()`;
-для длинных платьев/роб — `validate_cloth.validate()`. Для двуручных инструментов
-и помеченных рукоятей `validate_grips.validate()` проверяет хват и зазор от головы.
-Исправления общей библиотеки не изменяют уже запечённые сохранённые .blend и PNG.
+Winged servants have shortened leg anatomy and flight-specific poses. `validate_flight.validate()`
+checks ground, stable ground anchoring, wing movement in exported frames and support after falling.
+Arctarian anatomy, sensory plates and implants live in `_shared/arctarian.py`.
+`validate_arctarian.validate()` checks the absence of human eyes, required implants, device grips
+and device/body clearance. Object-only logic remains alongside its model, e.g.
+`arctarian/arct_workshop.py`, `arct_rescuer/arct_rescue.py` and their validators.
 
-Конные модели используют геометрию `_shared/equine.py`. Всадники и единорог сохраняют согласованные фазы движения.
-Отдельный `unicorn` строится перед всадником как его зависимость; затем одна и та же
-геометрия и фазы движения входят в композицию `nomad` / `nomad_archer`.
-Для конных моделей запускать `validate_equine.validate()`: проверяются швы циклов,
-земля, соединение ног с корпусом и границы восьми ракурсов.
-Для всадников дополнительно запускать `validate_mounted.validate()`: контакт таза
-с седлом, пальцев с поводьями и тетивой, отсутствие пересечений оружия с шеей/корпусом
-скакуна. Проверка не заменяет визуальный осмотр посадки и общей позы падения.
-Крылатая прислужница использует укороченную анатомию ног и отдельные лётные позы.
-`validate_flight.validate()` проверяет пол, неподвижную привязку к земле, движение
-крыльев именно в экспортируемых кадрах и опору тела после падения.
-Арктарианская анатомия, сенсорные пластины и импланты — `_shared/arctarian.py`.
-`validate_arctarian.validate()` проверяет отсутствие человеческих глаз, обязательные
-импланты, контакт рук с добывающим прибором и зазор между его корпусом и телом.
+Arctarian palettes reflect location: `arct_miner` and `arctarian` live inside the violet basin
+with violet skin and no external respirators. `arct_rescuer` meets humans on the upper ledge:
+green skin, transparent breathing mask and pale protective harness. Preserve these distinctions,
+based on catalog notes and game `lore-render.js` / `lore-world.js`.
 
-Логика, относящаяся только к одному объекту, хранится в его папке: `arctarian/arct_workshop.py`, `arct_rescuer/arct_rescue.py` и их проверки. Общие студия, анатомия рас и экспорт остаются в `_shared/`.
+Cloth validation also covers falling. To repair a baked robe, use
+`_shared/death_drape.py:repair_saved()`, then fully validate and re-export. It changes only death
+cloth keys and root support height; other poses remain intact.
 
-Палитры арктарианцев учитывают место действия: `arct_miner` и `arctarian` работают
-внутри фиолетовой атмосферной чаши и имеют фиолетовую кожу без наружных респираторов.
-`arct_rescuer` встречает людей на верхнем уступе: зелёная кожа, прозрачная дыхательная
-маска и светлая защитная перевязь. Основание — character descriptions и игровые
-`lore-render.js` / `lore-world.js`. Сохранять эти различия при последующих правках.
+Terrestrial animals share `_shared/animal_studio.py` for studio, materials and density.
+Species geometry/movement live in their `build.py`. `_shared/validate_animal.py` checks evaluated
+vertices at quarter frames, cycle closure, ground and eight views; species validators also
+check paws/hooves, bones and the final pose. Visually inspect intermediate poses before rendering.
 
-Падение также входит в `validate_cloth.validate()`. Для ремонта уже запечённой рясы используйте `_shared/death_drape.py:repair_saved()`, затем полную проверку и повторный экспорт: функция меняет только ключи ткани в death и высоту опоры корня. Остальные позы сохраняются.
+`horse/build.py` uses only geometry from `equine.make`, supplying its own three-segment legs,
+gaits, reins and folding stirrups. Run `horse/validate_horse.py` instead of the older segment
+validator. Reins preserve length/attachments; during death they rest on the ground without
+setting carcass height.
 
+`moving_dummy` is a nonliving canvas dummy on a four-wheeled wooden cart. Movement must not
+look like human walking; damage lowers its upright, head and right crossbar.
+Use `moving_dummy/validate_dummy.py`.
 
-Земные животные используют `_shared/animal_studio.py` для студии, материалов рендера и постоянной плотности. Геометрия и видовые движения находятся в `build.py` конкретного объекта. `_shared/validate_animal.py` проверяет оценённые вершины на четвертях кадра, замыкание циклов, землю и восемь ракурсов; видовая проверка рядом с моделью дополнительно проверяет опору лап/копыт, кости и финальную позу. Визуально просматривать промежуточные позы до рендера.
+## Environment and buildings
 
-Отдельный `horse/build.py` берёт только геометрию из `equine.make`, а трёхзвенные ноги, походку, поводья и складывание стремян задаёт самостоятельно. Для него запускать `horse/validate_horse.py`, а не старую проверку сегментов `validate_equine`. Поводья сохраняют длину и крепления; в падении укладываются на землю и не определяют высоту туши.
+Shared `environment_studio.py`, `render_single_view.py`, `environment_jobs.py` and
+`validate_environment.py` support `kind:dynamic/static`. Dynamic assets use one column of clips;
+static assets use one frame. Density/postprocessing match characters; export updates the root
+catalog. Inspect frames before `environment_jobs.start_render()`.
+`catalog.py next --kind dynamic` / `--kind static` selects work; `catalog.py audit` covers all kinds.
+A flag's origin is its top attachment to the pole; the pole is a separate sprite.
 
-`moving_dummy` — неживой полотняный манекен на деревянной тележке с четырьмя колёсами. Клипы движения не содержат человеческой ходьбы; повреждение опускает стойку, голову и правую перекладину. Проверка — `moving_dummy/validate_dummy.py`.
+Tileable `water_surface` is an exception to transparent borders: `tileable:true`, `crop:false`,
+a continuous square with top-down camera and material period matching frame width. Directional
+lighting preserves tiling. Soft effects use 32 alpha levels; other sources use 8. One-shot
+`fairy_field` and `cutter_ripple` end with a transparent frame and `loop:false`.
 
+Buildings follow [contract v1](../sprites/README.md) and `catalog[].assembly`: separate
+floor/walls/facade/roof PNGs share a 480×480 canvas and [48,160,384,320] footprint. Individual
+cropping is forbidden. Check transparency/openings in assembled outside/inside views.
+`building_studio.py` saves sources and updates the existing entry after all parts export;
+`building_architecture.py` contains profiles. Each object retains its source and `build.py`.
 
-Окружение: `environment_studio.py`, `render_single_view.py`, `environment_jobs.py` и `validate_environment.py` в `_shared/` работают с `kind:dynamic/static`. Динамика — одна колонка клипов; статика — один кадр. Плотность и постобработка совпадают с персонажами, PNG и готовность записываются в общий catalog. Проверять кадры до `environment_jobs.start_render()`. `catalog.py next --kind dynamic` / `--kind static` выбирает продолжение; `catalog.py audit` сверяет все готовые категории. У флага начало координат — верхняя точка крепления полотнища, древко в этот спрайт не входит.
+Single-view static objects use fixed daylight SUN: energy 2, angle 0.12, rotation
+15°/−10°/−20°. Effects use studio Key/Fill/Rim; smoke uses daylight.
+`environment_studio.begin()` removes previous helper lights/masks and sets the preset explicitly.
+`stairs_down` uses invisible floor-level holdout planes in RENDER_RIG to clip outer stairwell
+faces, not draw a background.
 
-Повторяемая вода `water_surface` — исключение из прозрачного обрамления: `tileable:true`, `crop:false`, квадратный непрерывный тайл. Камера сверху, период материала совпадает с шириной кадра; направленный свет сохраняет повторяемость. Мягкие эффекты используют 32 ступени alpha; остальные исходники сохраняют 8. Одноразовые `fairy_field` и `cutter_ripple` заканчиваются прозрачным кадром (`loop:false`).
+`door` has closed/open/locked/broken on 384×384 canvases. The stone frame reaches the engine's
+cutout edges; the open central passage is transparent. Shared `roof#default` and
+`interior_wall#default` are separate 384×384 components used only through explicit assembly
+references. No sidecar manifests or previews belong in sprites.
 
-Модульные здания производятся по контракту v1 из `sprites/README.md` и `catalog[].assembly`. Четыре отдельных PNG floor/walls/facade/roof имеют общий холст 480×480 и footprint [48,160,384,320]. Индивидуальная обрезка запрещена; прозрачность слоёв и проём проверяются сборкой снаружи/изнутри. `building_studio.py` сохраняет исходник и обновляет компоненты одного объекта в едином манифесте после экспорта всех частей. `building_architecture.py` содержит архитектурные профили; исходник и build.py лежат в папке каждого объекта.
+Fortification grid: 0.525 m. `city_wall`: 4.2 m span, 1.05 m masonry thickness, wall walk
+Z=3.15 m, crenellations to Z=3.675 m. `city_corner`: L-shaped 2.1×2.1 m, ports (2.1,0.525)
+and (0.525,2.1) before root rotation. Gates: 2.1 m clear opening, arch to 2.625 m.
+`dock`, `bridge`, `footbridge`: deck top Z=0, supports below, anchor on the walking plane.
 
-Одноракурсная статика использует фиксированный дневной SUN (energy 2, angle 0.12, поворот 15°/−10°/−20°), эффекты — студийные Key/Fill/Rim; дым использует дневной пресет. `environment_studio.begin()` удаляет вспомогательные источники и маски предыдущей сцены и явно задаёт пресет. Спуск `stairs_down` содержит невидимые holdout-плоскости уровня пола в RENDER_RIG: они отсекают наружные грани подземного лестничного колодца, а не рисуют фон.
+Lore landmarks contain static surroundings/objects. Do not bake living NPCs, fire, dust,
+fog, water or optical effects. `landmark_blue_fire` keeps a cold base and flame attachment;
+the engine tints a separate `campfire` blue. Chapels and other architecture use contract v1 layers.
 
-`door` содержит closed/open/locked/broken на холстах 384×384. Каменная рамка доходит до границ выреза движка; центральный проход open прозрачен. Общие `roof#default` и `interior_wall#default` — отдельные компоненты 384×384. Их движок использует только при явной ссылке в assembly. Никаких соседних манифестов и превью в sprites нет.
+Effect attachments in source-local 3D coordinates:
 
-Укрепления: общая сетка 0,525 м; `city_wall` — пролёт 4,2 м, толщина кладки 1,05 м, проход по стене Z=3,15 м, зубцы до Z=3,675 м. `city_corner` имеет L-контур 2,1×2,1 м, порты (2,1;0,525) и (0,525;2,1) до поворота корневого объекта. Ворота: свободный проём 2,1 м, свод до 2,625 м. У `dock`, `bridge`, `footbridge` верх настила — Z=0, опоры ниже; якорь на плоскости ходьбы.
+| Base                          | Effect                      | X, Y, Z        |
+| ----------------------------- | --------------------------- | -------------- |
+| flagpole                      | flag, top fabric attachment | 0, 0, 2.40     |
+| brazier                       | brazier_fire                | 0, 0, 0.69     |
+| hearth                        | hearth_fire                 | 0, 0, 0.15     |
+| torch_bracket                 | torch_flame                 | 0, −0.22, 0.30 |
+| firepit                       | campfire                    | 0, 0, 0.08     |
+| landmark_blue_fire            | campfire, blue tint         | 0, 0, 0.0944   |
+| fountain                      | fountain_water              | 0, 0, 0        |
+| ark_filter_base               | ark_filter                  | 0, 0, 0        |
+| ark_resonator_base            | ark_resonator               | 0, 0, 0        |
+| portal_frame / landmark_frame | portal_surface              | 0, 0, 0        |
 
-Статика лорных мест (`landmark_*`) содержит окружение и предметы. Живые NPC, огонь, пыль, туман, воду и оптические эффекты не запекаем. Для «Синего привала» оставлена холодная основа и точка огня; движку нужен синий оттенок отдельного `campfire`, а не второй костёр в статичном PNG. Часовня и прочая модульная архитектура используют отдельные слои по контракту v1.
+`audit_environment_sources.py` opens every ready single-view source in background Blender,
+checks export hashes, clips, density, camera, packed dependencies and PNG cells without editing
+files. Progress goes to system temp. `catalog.py audit` is the quick check without Blender.
 
-Точки крепления эффектов в координатах 3D-исходников (нулевой корень каждого объекта):
+`validate_building_sources.py` checks module sources: stationary camera, shared footprint,
+geometry in each layer, no top/side clipping, transparent open passage and source/PNG hash
+agreement. Standalone cropped environment sources use the separate environment audit.
 
-| Основа | Эффект | Смещение X, Y, Z |
-| --- | --- | --- |
-| flagpole | flag, верхняя точка полотнища | 0, 0, 2.40 |
-| brazier | brazier_fire | 0, 0, 0.69 |
-| hearth | hearth_fire | 0, 0, 0.15 |
-| torch_bracket | torch_flame | 0, −0.22, 0.30 |
-| firepit | campfire | 0, 0, 0.08 |
-| landmark_blue_fire | campfire, синий оттенок | 0, 0, 0.0944 |
-| fountain | fountain_water | 0, 0, 0 |
-| ark_filter_base | ark_filter | 0, 0, 0 |
-| ark_resonator_base | ark_resonator | 0, 0, 0 |
-| portal_frame / landmark_frame | portal_surface | 0, 0, 0 |
-
-`audit_environment_sources.py` — проверка в фоновом Blender: открывает каждый готовый одноракурсный исходник, сверяет экспортный hash, клипы, плотность, камеру, упаковку зависимостей и PNG-ячейки. Файлы не изменяет; прогресс пишет в системную временную папку. `catalog.py audit` — быстрая проверка всех категорий без Blender.
-
-`validate_building_sources.py` проверяет исходники модулей: неподвижность камеры, общий footprint, наличие геометрии каждого слоя, отсутствие обрезки сверху/сбоку, прозрачный открытый проход, совпадение hash исходника и PNG. `audit_environment_sources.py` проверяет самостоятельные обрезанные объекты; эти два формата не смешиваются.
-
-В исходниках модулей геометрия сгруппирована под `COMPONENT • <имя части>`. У двери в окне Blender по умолчанию виден closed; остальные группы состояний можно открыть через Outliner. Проверка модулей дополнительно сверяет наружное направление нормалей замкнутых деталей и кровельных плоскостей. Общие roof/interior_wall в 384×384 сохраняют пропорции шаблона 480×480 с коэффициентом 0,8.
+Module geometry is grouped under `COMPONENT • <part name>`. Doors show closed by default;
+other state groups are available in the Outliner. Module validation also checks outward normals
+of closed meshes and roof planes. Shared 384×384 roof/interior-wall components preserve the
+480×480 template proportions at factor 0.8.

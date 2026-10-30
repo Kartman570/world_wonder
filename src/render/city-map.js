@@ -1,0 +1,176 @@
+import { TILE } from '../core/content.js';
+const labels = {
+  castle: 'Castle · king',
+  townhall: 'Town Hall · elder',
+  warehouse: 'Warehouse · quartermaster',
+  smith: 'Smithy',
+  inn: 'Tavern',
+  stable: 'Stable',
+  barracks: 'Barracks',
+  prison: 'Prison',
+  cage: 'Cage',
+  apothecary: 'Healer and Herbalist',
+  tailor: 'Tailor',
+  farmshop: 'Farmer',
+  armory: 'Armorer',
+  bowshop: 'Bowyer',
+  leatherworks: 'Leatherworker',
+  provisions: 'Provisions Shop',
+};
+export function cityMapPoints(w, z) {
+  const points = [{ name: 'Central Square', x: z.x * TILE, y: z.y * TILE, kind: 'square' }];
+  for (const b of w.buildings.filter((b) => b.city === z.id && labels[b.type]))
+    points.push({
+      name: labels[b.type],
+      ...(b.entrance || { x: (b.x + b.w / 2) * TILE, y: (b.y + b.h) * TILE }),
+      kind: b.type,
+      buildingId: b.id,
+    });
+  const gates = z.gatePlan?.every((g) => Number.isFinite(g.x))
+    ? z.gatePlan
+    : (z.gates || []).map(([dx, dy]) => ({ x: z.x + dx, y: z.y + dy }));
+  for (const [i, g] of gates.entries())
+    points.push({
+      name: (g === z.primaryGate ? 'Main Gate' : 'Gate') + ' ' + (i + 1),
+      x: (g.x + 0.5) * TILE,
+      y: (g.y + 0.5) * TILE,
+      kind: 'gate',
+    });
+  if (z.portSite)
+    points.push({
+      name: 'River Port',
+      x: z.portSite.x * TILE,
+      y: z.portSite.y * TILE,
+      kind: 'port',
+    });
+  if (!points.some((p) => p.kind === 'townhall')) {
+    const mayor = w.entities.find((e) => e.faction === z.id && e.role === 'mayor' && e.hp > 0);
+    if (mayor)
+      points.push({
+        name: z.kind === 'village' ? 'Village Elder' : 'Mayor',
+        x: mayor.x,
+        y: mayor.y,
+        kind: 'mayor',
+      });
+  }
+  const herald = w.entities.find((e) => e.faction === z.id && e.role === 'herald' && e.hp > 0);
+  if (herald) points.push({ name: 'Herald', x: herald.x, y: herald.y, kind: 'herald' });
+  return points.map((p, i) => ({ ...p, index: i + 1 }));
+}
+export function cityMapBounds(z, points) {
+  const xs = [
+      z.x - (z.rx || 25) - 10,
+      z.x + (z.rx || 25) + 10,
+      ...(z.outline || []).map((p) => p[0]),
+      ...points.map((p) => p.x / TILE),
+    ],
+    ys = [
+      z.y - (z.ry || 25) - 10,
+      z.y + (z.ry || 25) + 10,
+      ...(z.outline || []).map((p) => p[1]),
+      ...points.map((p) => p.y / TILE),
+    ];
+  return {
+    left: Math.min(...xs) - 8,
+    top: Math.min(...ys) - 8,
+    right: Math.max(...xs) + 8,
+    bottom: Math.max(...ys) + 8,
+  };
+}
+export function drawCityMap(c, w, z, image, points, selected = null) {
+  const width = c.canvas.width,
+    height = c.canvas.height,
+    b = cityMapBounds(z, points),
+    scale = Math.min(width / (b.right - b.left), height / (b.bottom - b.top)),
+    ox = (width - (b.right - b.left) * scale) / 2,
+    oy = (height - (b.bottom - b.top) * scale) / 2,
+    project = (p) => ({
+      x: ox + (p.x / TILE - b.left) * scale,
+      y: oy + (p.y / TILE - b.top) * scale,
+    });
+  c.fillStyle = '#17281f';
+  c.fillRect(0, 0, width, height);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(
+    image,
+    b.left,
+    b.top,
+    b.right - b.left,
+    b.bottom - b.top,
+    ox,
+    oy,
+    (b.right - b.left) * scale,
+    (b.bottom - b.top) * scale,
+  );
+  const markers = [],
+    player = w.inCity(w.player)?.id === z.id ? project(w.player) : null;
+  for (const p of points) {
+    const anchor = project(p);
+    let placed = anchor;
+    const free = (q) =>
+      q.x > 11 &&
+      q.y > 11 &&
+      q.x < width - 11 &&
+      q.y < height - 11 &&
+      markers.every((m) => Math.hypot(m.x - q.x, m.y - q.y) > 20) &&
+      (!player || Math.hypot(player.x - q.x, player.y - q.y) > 16);
+    if (!free(placed)) {
+      let found = false;
+      for (let radius = 20; radius <= 64 && !found; radius += 12)
+        for (let i = 0; i < 12; i++) {
+          const q = {
+            x: anchor.x + Math.cos((i * Math.PI) / 6) * radius,
+            y: anchor.y + Math.sin((i * Math.PI) / 6) * radius,
+          };
+          if (free(q)) {
+            placed = q;
+            found = true;
+            break;
+          }
+        }
+    }
+    markers.push({ ...p, ...placed, anchor });
+  }
+  for (const p of markers)
+    if (Math.hypot(p.x - p.anchor.x, p.y - p.anchor.y) > 2) {
+      c.strokeStyle = '#dac38c99';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(p.anchor.x, p.anchor.y);
+      c.lineTo(p.x, p.y);
+      c.stroke();
+    }
+  for (const p of markers) {
+    c.fillStyle = p.index === selected ? '#faf0c1' : '#263c32';
+    c.strokeStyle = '#dcc18a';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.arc(p.x, p.y, 9, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    c.fillStyle = p.index === selected ? '#23392d' : '#f0dba4';
+    c.font = 'bold 10px system-ui';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(p.index, p.x, p.y);
+  }
+  if (w.inCity(w.player)?.id === z.id) {
+    const p = project(w.player);
+    c.fillStyle = '#fff7df';
+    c.strokeStyle = '#384236';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(p.x, p.y - 8);
+    c.lineTo(p.x + 6, p.y + 6);
+    c.lineTo(p.x, p.y + 3);
+    c.lineTo(p.x - 6, p.y + 6);
+    c.closePath();
+    c.fill();
+    c.stroke();
+  }
+  c.fillStyle = '#e4d7af';
+  c.font = 'bold 12px system-ui';
+  c.textAlign = 'right';
+  c.fillText('From ↑', width - 12, 18);
+  return markers;
+}

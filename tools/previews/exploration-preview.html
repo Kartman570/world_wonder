@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Journal Preview · many tasks</title
+  ><link rel="stylesheet" href="../../src/ui/game.css" /><style>
+    body {
+      background: #25372e;
+    }
+    body > small {
+      position: fixed;
+      left: 20px;
+      top: 15px;
+      color: #c5ae78;
+      z-index: 5;
+    }
+    #modal {
+      background: #07100f80;
+    }</style
+  ><small>Interface Preview · demonstration tasks · game save is not used</small>
+  <div id="modal">
+    <section class="modal-card"><div id="preview"></div></section>
+  </div>
+  <script type="module">
+    import { renderJournal } from '../../src/ui/exploration-ui.js';
+    const titles = [
+      'Hides for Winter Cloaks',
+      'Peace on the Road',
+      'To the Next Gate',
+      'Iron for the Garrison',
+      'Medicine for the Watch',
+      'Missing Apprentice',
+      'A Letter Beyond the Far Gate',
+      'Boards for the New Quay',
+    ];
+    const w = {
+      quests: Array.from({ length: 22 }, (_, i) => ({
+        id: i,
+        title: titles[i % 8],
+        giver: 'smith',
+        city: i % 3,
+        status: i < 8 ? 'active' : i < 20 ? 'completed' : 'failed',
+        reward: 75 + i * 10,
+      })),
+      cities: ['Flinthold', 'Whiteford', 'Alderbrook'].map((name, id) => ({ id, name })),
+      factionName: (id) => ['Flinthold', 'Whiteford', 'Alderbrook'][id],
+      questText: (q) =>
+        'Bring supplies to the client. Return and speak to them in person to turn in the task and receive ' +
+        q.reward +
+        ' gold. The client waits in their workshop beside the eastern wall.',
+      caravanStats: { arrived: 12, lost: 2 },
+      territories: [{ name: 'Northern Forest', owner: 1 }],
+      events: Array.from({ length: 30 }, (_, i) => ({
+        time: i,
+        text: 'The caravan has arrived at the town gates. Guards inspect the wagons.',
+      })),
+      eventObservable: () => true,
+    };
+    renderJournal(document.querySelector('#preview'), w, {
+      relics: 9,
+      returned: 2,
+      openRelics: () => {},
+      openNotes: () => {},
+      cityMemory: (w, id) => ({ reputation: 10 + id * 5, history: [] }),
+      warrant: () => null,
+      roleName: () => 'Blacksmith',
+      formatTime: (t) => '08:' + String(t).padStart(2, '0'),
+    });
+  </script>
+</html>

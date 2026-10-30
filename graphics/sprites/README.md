@@ -1,146 +1,178 @@
-# Единый манифест графики
+# Single graphics manifest
 
-`manifest.json` — единственный манифест. В `catalog` каждый персонаж или объект описан ровно один раз: художественное задание, готовность, путь PNG и технические параметры находятся в одной записи.
+`manifest.json` is the only manifest. Each character or object appears exactly once in
+`catalog`, combining the art brief, readiness, PNG paths and technical parameters.
 
-## Готовность
+## Readiness and paths
 
-- `spriteReady:false` — PNG ещё не готов, движок его не запрашивает.
-- `spriteReady:true` — PNG готов к загрузке. Это не означает, что нарисованы все запланированные анимации.
-- `animations.<clip>.ready` — готовность отдельного клипа. Движок использует только готовые клипы, остальные остаются заданиями художнику.
+- `spriteReady:false`: PNG is not ready; the engine does not request it.
+- `spriteReady:true`: PNG is loadable; this does not mean every planned animation is complete.
+- `animations.<clip>.ready`: individual clip readiness. Unfinished clips remain artist tasks.
 
-У стражника готовы idle, walk, run, attack и death. Размеры ячейки, anchor, fps, hash и диапазоны строк записаны непосредственно в его записи `catalog`. Отдельного списка готовых моделей и локальных манифестов нет.
+Cell dimensions, anchor, fps, hashes and row ranges belong directly in the catalog entry.
+There is no separate list of completed models or local manifests. Read current readiness
+from the manifest rather than keeping a second list in documentation.
 
-## Пути
+- Characters: `characters/<id>/<id>_atlas.png`, eight columns E, SE, S, SW, W, NW, N, NE;
+  all clips share one sheet.
+- Static objects: `static/<id>/<id>_static.png`, one fixed view, no animation,
+  `type:static`, `directions:1`.
+- Dynamic objects: `dynamic/<id>/<id>_loop.png`, one column, frames top to bottom,
+  no directional set, `type:dynamic`, `directions:0`. One-shot effects use `loop:false`.
 
-- Персонаж: `characters/<id>/<id>_atlas.png` — восемь колонок E, SE, S, SW, W, NW, N, NE, все клипы в одном листе.
-- Статик: `static/<id>/<id>_static.png` — один фиксированный ракурс без анимации, `type:static`, `directions:1`.
-- Динамик: `dynamic/<id>/<id>_loop.png` — одна колонка кадров сверху вниз, без набора направлений, `type:dynamic`, `directions:0`. Одноразовые эффекты имеют `loop:false`.
+IDs are stable ASCII snake_case names. `file` is relative to the sprites root.
+Example: `characters/city_guard/city_guard_atlas.png`.
 
-`id` — стабильное имя snake_case латиницей. `file` задаётся относительно корня sprites. Готовый стражник: `characters/city_guard/city_guard_atlas.png`.
+Git does not store empty directories. Exporters create directories when writing PNGs;
+placeholder files are unnecessary. Root `.gitignore` rules retain PNGs, this README and
+the root manifest. Keep intermediate frames and Blender sources elsewhere.
 
-Git не хранит пустые каталоги. Путь будущего объекта задан в манифесте; экспортёр создаёт папку при записи PNG. Файлы-заглушки не нужны. Общие исключения заданы в корневом `.gitignore`: в sprites сохраняются PNG, корневой manifest.json и эта инструкция. Промежуточные кадры и исходники Blender сюда не клади.
+## Art briefs and export
 
-## Художественные задания
+Each animation has a `description`. `suggestedFrames` and fps are recommendations;
+frame counts and dimensions are model-specific. `gameRoles` connects models to roles;
+`notes`, `variants` and `group` describe variations. `optional:true` marks future reserves.
 
-У каждой анимации есть `description`. `suggestedFrames` и fps — ориентиры, число кадров и размеры индивидуальны. `gameRoles` связывает модель с ролью; `notes`, `variants`, `group` описывают нюансы. `optional:true` означает резерв на будущее.
+Animate in place without root displacement. Death does not loop: its final frame remains
+a lootable body. Tools must match separate workstations: a smith strikes an anvil, a fisher
+uses a rod and bucket. See `catalog` for the full task list.
 
-Персонажи движутся на месте, без смещения корня. Смерть не зациклена, последний кадр остаётся телом для обыска. Профессиональный инструмент должен соответствовать рабочей станции: кузнец бьёт по отдельной наковальне, рыбак взаимодействует с отдельной удочкой и ведром. Полный список персонажей и объектов находится в catalog.
+Buildings use separate roof, entrance, walls and facade modules. Generation varies sizes
+and outlines. Interiors are hidden from outside; UI draws building labels. Do not bake
+fire, waving flags or effects into static bases. Town and clan palettes reuse models.
+Lore objects must not explicitly reveal the world's technological past.
 
-Здания модульные: крыша, вход и стены/фасад отдельно. Генератор меняет размеры и контуры. Интерьер скрывается снаружи; надписи зданий рисует интерфейс. Огонь, полотнище флага и эффекты не запекай в неподвижную основу. Палитры поселений и кланов переиспользуют общую модель. Лорные объекты не должны прямо раскрывать технологическое прошлое.
+`frameWidth` and `frameHeight` describe the cropped cell; `frames` counts all atlas rows.
+Character PNG width is `frameWidth * 8`, height is `frameHeight * frames`. A ready clip
+contains `start` (zero-based first row), `frames`, `fps`, `loop` and `ready:true`, beside
+its description. Looping playback uses:
 
-## Технические параметры и экспорт
+```js
+column = ((direction % 8) + 8) % 8;
+row = clip.start + (Math.floor(seconds * (clip.fps ?? asset.fps)) % clip.frames);
+```
 
-`frameWidth`, `frameHeight` — размер ячейки после общей обрезки; `frames` — все строки листа. Ширина PNG персонажа = frameWidth × 8, высота = frameHeight × frames. Готовый клип содержит `start` (первая строка с нуля), `frames`, `fps`, `loop`, `ready:true`; художественное описание сохраняется рядом.
+Clamp nonlooping clips to their final frame. Idle uses its own clip, never walking rows.
+Do not apply a second direction permutation. Shared cropping covers every pose and view;
+anchor is recalculated automatically. Use straight alpha and nearest-neighbor rendering.
 
-Общая обрезка одинакова для всех поз и направлений, anchor пересчитывается автоматически. Прозрачность straight alpha, вывод без сглаживания. Движок выбирает модель по `персонаж.sprite → roles[role] → races[race]`; значения — id записи catalog.
+Model priority: `character.sprite → roles[role] → races[race]`; values are catalog IDs.
+The [Blender exporter](../3d/README.md) creates PNGs and updates the existing catalog entry
+with dimensions, hash and clip readiness. `publish:true` also connects game roles.
+Missing clips retain `ready:false`. Do not create sidecar JSON files.
 
-[Инструкция Blender](../3d/README.md). Экспортёр создаёт PNG и обновляет его единственную запись в корневом manifest.json: размеры, hash и готовность клипов. `publish:true` дополнительно подключает модель к игровым ролям. При экспорте неполного набора клипов отсутствующие остаются в каталоге с ready:false. Никаких соседних JSON не создаётся.
+## Automatic discovery and loading
 
-PNG подключены для персонажей и модульных зданий (контракт ниже); остальные static/dynamic — план последующего подключения окружения. Загрузка ближайших персонажей, очередь из трёх запросов, общий кеш и бюджет памяти сохранены. Просмотрщик `/sprite-preview.html` показывает только готовые модели и клипы.
+Ready models are discovered by role: `player` matches `player`, `banditArcher` matches
+`bandit_archer`. Other names use `gameRoles`; races use `gameRaces` or a matching ID.
+Explicit `character.sprite` takes priority. A dedicated ready role model replaces the
+shared fallback; `roles`/`races` tables remain fallback bindings.
 
-Проверки: `node tests/sprite-sheets.mjs`, `node tests/art-catalog.mjs`.
+After export, reload the page. The manifest uses `cache:no-store`, PNG validation uses
+`cache:no-cache`, and hashes version URLs. Neither a new world nor an engine edit is needed
+for each model. Ready `run`, `swim`, `ride`, `stunned`, `draw_weapon`/`sheath` and
+`attack_<weapon>` clips are selected automatically.
 
-Игрок player готов: все 15 запланированных клипов, плюс sheath и work_knife. Все кадры находятся в characters/player/player_atlas.png; актуальные размеры и диапазоны брать из catalog.player. Вариант защитного костюма из notes не входит в этот набор анимаций.
+`water_surface` is `tileable:true`: frames fill a square without transparent margins and
+repeat on both axes. Other objects retain transparent borders. Nonlooping effects may
+start and end with fully transparent frames.
 
-## Автоматическое подключение
+Repeatable `wood_floor`, `stone_floor`, `cave_floor`, `catacomb_floor`, `lake_bed`,
+`sand_tile`, `forest_ground`, `road_tile` and `trail_tile` also use `tileable:true`:
+one 64×64 square, no transparent border, 2.1×2.1 m source period, top-down camera.
+Neighboring copies of materials, leaves and stones must close both pattern and shadows.
 
-Готовая модель выбирается по роли без ручной регистрации: role=player находит id=player, role=banditArcher — id=bandit_archer. Другое имя связывается через gameRoles, раса — через gameRaces или совпадающий id. Явный персонаж.sprite имеет приоритет. Готовая собственная модель роли заменяет общий запасной спрайт; таблицы roles/races остаются запасными привязками.
+## Modular buildings: contract v1
 
-После экспорта достаточно обычной перезагрузки страницы: manifest запрашивается с cache:no-store, PNG проверяется с cache:no-cache, hash версионирует URL. Новый мир и изменение движка для каждой модели не нужны. Стандартные клипы run, swim, ride, stunned, draw_weapon/sheath и attack_<оружие> выбираются автоматически, если готовы.
+The same manifest is the sole source of `catalog[].components` and `assembly`.
+The 30 `building_*` entries plus `door`, `roof` and `interior_wall` have no fictitious
+single `file`. They are static objects; every part is a separate single-view PNG.
+`building_smith#roof` references `components.roof` in `building_smith`.
+Shared fallbacks `roof#default` and `interior_wall#default` require explicit `asset` references.
 
-У `water_surface` поле `tileable:true`: кадр заполняет квадрат без прозрачных отступов, его можно повторять по обеим осям. Для остальных объектов прозрачное обрамление сохраняется. Одноразовые эффекты (`loop:false`) могут начинаться и заканчиваться полностью прозрачными кадрами.
-
-Повторяемые покрытия `wood_floor`, `stone_floor`, `cave_floor`, `catacomb_floor`, `lake_bed`, `sand_tile`, `forest_ground`, `road_tile`, `trail_tile` также используют `tileable:true`. Один квадратный кадр 64×64, без прозрачного обрамления; исходный период 2,1×2,1 м, камера сверху. Соседние копии материалов, листьев и камешков замыкают рисунок и тени.
-
-## Модульные здания: контракт v1
-
-Единственный источник данных — этот же `manifest.json`, поля `catalog[].components` и `assembly`.
-У 30 `building_*`, `door`, `roof`, `interior_wall` больше нет фиктивного единственного `file`.
-Это статичные объекты (`type:static`); каждая часть — отдельный одноракурсный PNG.
-Ссылка `building_smith#roof` означает `components.roof` записи `building_smith`.
-`roof#default` и `interior_wall#default` — необязательные общие заменители: подключать явно через `asset`.
-
-**Точный образец — `building_smith` в манифесте:**
+The exact example is `building_smith`:
 
 - `static/building_smith/building_smith_floor.png`
 - `static/building_smith/building_smith_walls.png`
 - `static/building_smith/building_smith_facade.png`
 - `static/building_smith/building_smith_roof.png`
-- дверь: `static/door/door_closed.png`, `door_open.png`, `door_locked.png`, `door_broken.png`.
+- Doors: `static/door/door_closed.png`, `door_open.png`, `door_locked.png`, `door_broken.png`.
 
-Четыре слоя кузницы имеют одинаковый прозрачный холст **480×480** без индивидуальной обрезки.
-Локальный наземный прямоугольник занимает **[48,160,384,320]** пикселей (x,y,w,h).
-Все части рисуются относительно него: стены вверх от основания, крыша в верхнем запасе холста.
-Якорь PNG `[0,0]`; `rect:[-0.125,-0.5,1.25,1.5]` задаёт место всего холста относительно
-реального наземного прямоугольника здания. Мировые координаты: начало `(b.x*TILE,b.y*TILE)`,
-размер `(b.w*TILE,b.h*TILE)`. Все слои растягиваются согласованно с ним по обеим осям.
-Текстуры следует делать пригодными к такому изменению пропорций; секции автоматически не повторяются.
-Для другого контура нужен отдельный `assembly.variants`: `rect` для обычных домов,
-`ellipse` для `arkVault`. Не растягивать прямоугольный дом в круглую хижину.
-Если нужного варианта нет, остаётся процедурная отрисовка. Коллизии и интерьер сохраняют контур генератора.
+The four smithy layers share an uncropped **480×480** transparent canvas. The local ground
+rectangle is **[48,160,384,320]** pixels (x,y,w,h). Walls extend upward from this footprint;
+the roof occupies the upper canvas margin. PNG anchor is `[0,0]`.
+`rect:[-0.125,-0.5,1.25,1.5]` positions the canvas relative to the building's actual ground
+rectangle: origin `(b.x*TILE,b.y*TILE)`, size `(b.w*TILE,b.h*TILE)`.
+All layers scale together on both axes. Textures must tolerate changing proportions;
+sections do not tile automatically.
 
-`walls` содержит задние/боковые стены, `facade` — переднюю стену, без пола/крыши.
-`doorCutout:true` вырезает в walls/facade проём по реальной клетке `b.door`, поэтому
-художнику не нужно угадывать положение входа при разной ширине здания.
-`floor` виден только изнутри. Внешний фасад и крыша имеют `visibility:outside` и
-исчезают сразу при входе; задние стены остаются. Мебель рисует существующий интерьерный слой.
-`ground` идёт до персонажей; `depth` сортируется с персонажами по южному краю здания:
-персонаж перед домом перекрывает фасад, персонаж за ним скрывается. Прозрачный фон обязателен.
+Different outlines need `assembly.variants`: `rect` for ordinary buildings, `ellipse` for
+`arkVault`. Do not stretch a rectangular house into a round hut. Missing variants retain
+procedural rendering; collisions and interiors keep the generator's actual outline.
 
-Дверь использует отдельный квадратный холст **384×384**, без обрезки, anchor `[0,0]`.
-`origin:door` означает начало в левом верхнем углу клетки двери; её `rect:[0,-0.5,1,1.5]`
-задан **в клетках**, а не в долях всего здания. Порог в нижней трети рисунка.
-`states` связывает состояния closed/open/locked/broken с отдельными PNG. Открытая дверь
-должна оставлять проход прозрачным. `b.doorState` задаёт явное состояние; без него внутри
-выбирается open, снаружи closed. Контракт отображения не добавляет новую механику замков.
+`walls` holds rear/side walls; `facade` holds the front wall, without floor or roof.
+`doorCutout:true` cuts an opening in walls/facade at the actual `b.door` tile, so artists
+need not predict door placement at different widths. `floor` is visible only inside.
+Facade and roof use `visibility:outside` and disappear upon entry; rear walls remain.
+Furniture uses the existing interior layer.
 
-Для каждого готового компонента поставить `spriteReady:true`, записать действительные
-`frameWidth`, `frameHeight`, `frames:1`, `directions:1`, anchor и hash содержимого.
-Не менять размер/обрезку одного слоя отдельно от остальных. Описанные размеры — точный
-стартовый шаблон; согласованно изменить холст всех слоёв и sourceCanvas допускается.
-Верхний `spriteReady:true` означает, что экспортированы все обязательные компоненты всех вариантов;
-сам движок проверяет готовность частей, включая выбранное состояние двери. Частичные экспорты допустимы.
-Пока обязательные видимые слои не декодированы, здание целиком рисуется старым способом;
-`required:false` разрешает пропустить декоративную часть. Загрузка использует общую очередь
-из трёх запросов, кеш с бюджетом памяти, переиспользование URL и проверку свежести PNG.
-Новых списков ассетов и соседних манифестов не создавать.
+`ground` renders before characters. `depth` sorts with characters at the building's south
+edge: a character in front covers the facade; one behind is obscured. Transparency is required.
 
-Проверка контракта: `node tests/building-sprites.mjs`.
+Doors use uncropped **384×384** canvases and anchor `[0,0]`. `origin:door` starts at the
+door tile's top-left corner; `rect:[0,-0.5,1,1.5]` uses **tiles**, not building fractions.
+The threshold is in the lower third. `states` maps closed/open/locked/broken to separate
+PNGs; an open door leaves a transparent passage. Explicit `b.doorState` wins, otherwise
+inside selects open and outside selects closed. This rendering contract adds no lock mechanics.
 
-У двери также готовы стили `canvas_*`, `iron_*`, `alloy_*` (суффиксы closed/open/locked/broken). Шатры используют ткань, клетка и пещерный вход — решётку, арктарианское жилище — гермодверь. Ссылки уже заданы в `assembly.variants.*.parts[].states`; движку не нужно выбирать стиль по имени здания. Размер каждого дверного PNG — 384×384.
+For each completed component, set `spriteReady:true` and actual `frameWidth`, `frameHeight`,
+`frames:1`, `directions:1`, anchor and content hash. Never crop or resize one layer alone.
+The sizes above are the exact starting template; changing all canvases and `sourceCanvas`
+together is allowed. Top-level readiness means all required components of all variants
+are exported; the engine checks individual parts, including the chosen door state.
+Partial exports are allowed. Until required visible layers decode, the whole building
+uses procedural rendering. `required:false` allows optional decoration to be omitted.
 
-### Окружение и посадка в седле
+Door styles `canvas_*`, `iron_*` and `alloy_*` also provide all four state suffixes. Tents
+use fabric, cages and cave entrances use bars, Arctarian dwellings use pressure doors.
+References are explicit in `assembly.variants.*.parts[].states`; the engine does not infer
+styles from building names. Each door PNG remains 384×384.
 
-`environment-sprites.js` использует тот же кеш и очередь PNG для деревьев, инопланетной
-растительности, статуй, фонтанов, флагов и мебели. Static — один столбец, dynamic — один
-столбец с клипом `loop`. Готовое окружение и ближайшие персонажи подготавливаются до снятия
-экрана загрузки; новые персонажи запрашиваются заранее за пределами видимой области.
-Если известный готовый PNG ещё загружается, старый векторный персонаж не подставляется;
-при реальной ошибке загрузки остаётся запасная графика.
+## Environment, riding and visibility
 
-У `horse.attachments.saddle` и `player.attachments.seat` заданы нормализованные координаты
-точки седла и таза на соответствующей ячейке. Движок совмещает их с учётом anchor и scale;
-фиксированный подъём персонажа на 47 пикселей больше не применяется. Художник может уточнять
-точки при изменении модели. Всадник использует клип `ride`, лошадь — собственный PNG.
-Проверка восьми направлений и окружения: `/environment-preview.html`.
+`src/render/environment-sprites.js` shares the PNG cache and three-request queue for trees,
+alien vegetation, statues, fountains, flags and furniture. Static assets have one column;
+dynamic assets have one column with a `loop` clip. Ready environment assets and nearby
+characters are prepared before the loading screen closes; new characters are requested
+outside the visible area. A ready character PNG still loading does not flash the old
+vector sprite; actual load failures retain fallback graphics.
 
-Отсечение окружения выполняется по полному прямоугольнику PNG (anchor, scale, размеры),
-а зданий — по объединению прямоугольников модулей, включая выступающую крышу.
-Точка ствола/центр здания может оставаться за экраном, пока крона или крыша уже видны.
-Деревья запрашиваются из пространственного индекса с запасом 1200 мировых пикселей;
-компоненты ближайших зданий подготавливаются в зоне ещё на 1800 пикселей шире кадра.
-Готовое окружение и модули зданий закреплены в кеше после стартовой загрузки
-(текущие текстуры занимают примерно 121 МиБ в декодированном виде), чтобы неподвижный
-дом не приходилось загружать повторно после обхода города. Кеш персонажей остаётся LRU.
-Манекен использует `dummy_static`; лагерь собирается из `camp_tent`, `camp_chest`,
-`firepit`, `campfire`. Арктарианские объекты подключены и внутри помещений, и снаружи;
-`ark_filter`/`ark_resonator` накладываются на соответствующие `_base`.
-Края подземных стен рисуются `cave_wall` или `catacomb_wall` по типу реальной клетки,
-включая смешанные участки руин; туман исследования накладывается поверх.
+`horse.attachments.saddle` and `player.attachments.seat` hold normalized saddle and pelvis
+coordinates. The engine aligns them using anchor and scale rather than a fixed 47-pixel
+rider lift. Artists may adjust attachment points after model changes. Riders use `ride`;
+horses have their own PNG. Review all eight directions in
+`/tools/previews/environment-preview.html`.
 
-Вокруг игрока применяется мягкий просвет растительности (`canopy-window.js`):
-радиус 130 мировых пикселей, ядро 85, непрозрачность в центре 8%.
-Маска действует только на пиксели дерева/инопланетного растения, а не на землю,
-персонажей или весь экран. Пересечение определяется по границам кроны, не по стволу.
-Для пересекающихся спрайтов переиспользуется один промежуточный Canvas;
-остальная растительность рисуется напрямую. PNG художнику менять не нужно.
+Environment culling uses full PNG bounds, including anchor, scale and dimensions. Buildings
+use the union of module bounds, including projecting roofs. Crowns and roofs can therefore
+appear before their trunk/building center enters the screen. Trees are queried with a
+1200-world-pixel margin; nearby building modules prepare in an 1800-pixel margin.
+Environment and building textures remain pinned after startup (currently about 121 MiB
+decoded) to prevent reloads while walking around town. Character textures use LRU eviction.
+
+Standing dummies use `dummy_static`; camps combine `camp_tent`, `camp_chest`, `firepit`
+and `campfire`. Arctarian objects render indoors and outdoors; `ark_filter` and
+`ark_resonator` overlay their `_base` objects. Dungeon edges choose `cave_wall` or
+`catacomb_wall` from actual tile types, including mixed ruins. Exploration fog renders above.
+
+`src/render/canopy-window.js` reveals the area around the player through vegetation:
+130-world-pixel radius, 85-pixel core, 8% center opacity. Only tree/alien-plant pixels are
+masked, not ground, characters or the screen. Crown bounds determine overlap, not trunks.
+One temporary Canvas is reused for intersecting sprites; other vegetation draws directly.
+No artist PNG changes are required.
+
+```sh
+node tests/sprite-sheets.mjs
+node tests/art-catalog.mjs
+node tests/building-sprites.mjs
+```

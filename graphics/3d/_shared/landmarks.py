@@ -32,9 +32,9 @@ def build(asset):
   # Short protective fence, with cut marks instead of baked readable interface text.
   for x in [-1.12,1.12]:R('Old pine protective fence post',(x,-.86,.0),(x,-.86,.74),.035,wood)
   for z in [.31,.62]:B('Old pine fence rail',(0,-.86,z),(2.30,.06,.065),wood,bevel=.006)
-  data=bpy.data.curves.new('Old pine carved inscription','FONT');data.body='Будь как Уарелонское дерево';data.align_x='CENTER';data.align_y='CENTER';data.size=.055;data.extrude=.004;data.resolution_u=8;data.font=bpy.data.fonts.load('/System/Library/Fonts/Supplemental/Georgia.ttf')
+  data=bpy.data.curves.new('Old pine carved inscription','FONT');data.body='Be like the Uarelon Tree';data.align_x='CENTER';data.align_y='CENTER';data.size=.055;data.extrude=.004;data.resolution_u=8;data.font=bpy.data.fonts.load('/System/Library/Fonts/Supplemental/Georgia.ttf')
   text=bpy.data.objects.new('Inscription cutter',data);c.objects.link(text);text.parent=root;text.location=(0,-.888,.62);text.rotation_euler=(math.pi/2,0,0);bpy.context.view_layer.update();dg=bpy.context.evaluated_depsgraph_get();engraving=bpy.data.meshes.new_from_object(text.evaluated_get(dg));cut=bpy.data.objects.new('Solid inscription cutter',engraving);c.objects.link(cut);cut.matrix_world=text.matrix_world.copy();cut.parent=root;bpy.data.objects.remove(text,do_unlink=True)
-  rail=next(o for o in c.objects if o.name.startswith('Old pine fence rail') and o.location.z>.5);bpy.context.view_layer.objects.active=rail;mod=rail.modifiers.new('Actual recessed Cyrillic inscription','BOOLEAN');mod.operation='DIFFERENCE';mod.use_self=True;mod.object=cut;bpy.ops.object.modifier_apply(modifier=mod.name);bpy.data.objects.remove(cut,do_unlink=True)
+  rail=next(o for o in c.objects if o.name.startswith('Old pine fence rail') and o.location.z>.5);bpy.context.view_layer.objects.active=rail;mod=rail.modifiers.new('Actual recessed English inscription','BOOLEAN');mod.operation='DIFFERENCE';mod.use_self=True;mod.object=cut;bpy.ops.object.modifier_apply(modifier=mod.name);bpy.data.objects.remove(cut,do_unlink=True)
  elif asset=='landmark_cut_stone':
   import_asset(ns,'boulder',(-.20,.30,0),1.35);import_asset(ns,'boulder',(.35,1.20,.12),.95)
   import_asset(ns,'old_road_fragment',(0,-.35,.98),1.2)

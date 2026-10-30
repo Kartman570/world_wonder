@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Characters — New Appearance</title
+  ><style>
+    body {
+      margin: 0;
+      padding: 18px;
+      background: #15271e;
+      color: #ded7b8;
+      font: 13px system-ui;
+    }
+    h1 {
+      font: 26px Georgia;
+      margin: 0 0 8px;
+    }
+    p {
+      margin: 0 0 8px;
+      color: #b4bca6;
+    }
+    canvas {
+      width: 100%;
+      max-width: 1200px;
+      display: block;
+    }
+    button {
+      background: #344a37;
+      border: 1px solid #a4976844;
+      color: #e6d5a8;
+      padding: 5px 12px;
+      margin: 0 4px 8px 0;
+      cursor: pointer;
+    }
+    button[aria-pressed='true'] {
+      background: #9c895b;
+      color: #14241c;
+    }
+  </style>
+  <h1>People of the Roads and Towns</h1>
+  <p>
+    Eight directions, walking, clothing and professional tools — the same sprites as in the game.
+  </p>
+  <nav id="views"></nav>
+  <canvas width="1200" height="855" id="people"></canvas>
+  <script type="module">
+    import { characterSprite } from '../../src/render/character-sprites.js';
+    const roles = [
+      ['player', 'Wanderer'],
+      ['king', 'King'],
+      ['wizard', 'Eyran'],
+      ['guard', 'Guard'],
+      ['archer', 'Archer'],
+      ['bandit', 'Bandit'],
+      ['hunter', 'Hunter'],
+      ['merchant', 'Merchant'],
+      ['fisher', 'Fisher'],
+      ['forester', 'Lumberjack'],
+      ['smith', 'Blacksmith'],
+      ['miner', 'Miner'],
+      ['tailor', 'Seamstress'],
+      ['cook', 'Cook'],
+      ['herbalist', 'Herbalist'],
+      ['herald', 'Herald'],
+      ['grainFarmer', 'Grain Farmer'],
+      ['miller', 'Miller'],
+      ['baker', 'Baker'],
+      ['brewer', 'Brewer'],
+      ['beekeeper', 'Beekeeper'],
+      ['tanner', 'Tanner'],
+      ['healer', 'Healer'],
+      ['captive', 'Apprentice'],
+    ];
+    let dir = 1,
+      frame = 0;
+    for (const [i, label] of ['In', 'SE', 'S', 'SW', 'W', 'NW', 'From', 'NE'].entries()) {
+      const b = document.createElement('button');
+      b.textContent = label;
+      b.setAttribute('aria-pressed', i === dir);
+      b.onclick = () => {
+        dir = i;
+        for (const q of document.querySelectorAll('button'))
+          q.setAttribute('aria-pressed', q === b);
+      };
+      document.querySelector('nav').append(b);
+    }
+    const c = document.querySelector('canvas').getContext('2d');
+    function draw() {
+      roles.forEach(([role, name], i) => {
+        const x = (i % 8) * 150,
+          y = Math.floor(i / 8) * 285;
+        c.fillStyle = i % 2 ? '#5b6851' : '#53624b';
+        c.fillRect(x, y, 150, 285);
+        c.fillStyle = '#eee1bc';
+        c.font = '15px system-ui';
+        c.textAlign = 'center';
+        c.fillText(name, x + 75, y + 26);
+        c.drawImage(
+          characterSprite(role, dir, Math.floor(frame / 10), {
+            faction: role === 'bandit' ? 'red' : 'oak',
+            variant: i % 3,
+            weapon: role === 'player' ? 'sword' : '',
+          }),
+          x - 33,
+          y + 35,
+          216,
+          216,
+        );
+      });
+      frame++;
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
+</html>

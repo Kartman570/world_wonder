@@ -1,10 +1,102 @@
-<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Пепельный тракт — живой мир</title><link rel="stylesheet" href="style.css"></head><body class="main-menu">
-<canvas id="world"></canvas><div class="vignette"></div>
-<header><div class="location"><span id="zone">Собор последнего света</span><small id="zone-sub">УБЕЖИЩЕ · ЮЖНЫЕ ЗЕМЛИ</small></div><div class="clock"><span id="time">☀ 08:00</span><small id="day">ДЕНЬ 1</small></div><span id="debug-badge" class="hidden">DEBUG</span><button id="menu" aria-label="Меню игры" title="Меню (Esc)">☰</button><button id="pause" title="Пауза (P)">Ⅱ</button></header>
-<aside class="quest-panel"><div class="eyebrow">ПУТЕВОЙ ЖУРНАЛ <button id="quest-toggle" aria-label="Скрыть задания" aria-expanded="true" aria-controls="quest-body">−</button></div><div id="quest-body"><h2 id="quest-title">Там, где начинается путь</h2><p id="quest-desc">Поговорите с магистром Софосом в центральном зале собора.</p><div class="quest-line"><i></i><span id="quest-step">Найдите магистра Софоса</span></div><button class="text-button" id="journal">Открыть журнал ↗</button></div></aside>
-<aside class="map-panel"><div class="eyebrow">ЮЖНЫЕ ЗЕМЛИ <span>M</span></div><canvas id="minimap" width="180" height="145"></canvas><div class="map-legend"><b>◆</b> Вы <span>● Поселения</span></div></aside>
-<section id="feed" aria-live="polite"></section>
-<div class="bottom"><div class="portrait">♜<span>01</span></div><div class="vitals"><div class="player-name">СТРАННИК <small id="coins">24 зол.</small></div><div class="bar health"><i id="hpbar"></i><span id="hp">100 / 100</span></div><div class="bar stamina"><i id="stbar"></i><span>ВЫНОСЛИВОСТЬ</span></div></div><div class="hotkeys"><button id="draw-weapon" aria-pressed="false" title="R · Достать или убрать оружие"><kbd>R</kbd><span>Достать оружие</span><b>⚔</b></button><button id="attack"><kbd>ЛКМ</kbd><span>Удар</span><b>⚔</b></button><button id="interact"><kbd>E</kbd><span>Взаимодействие</span><b>✦</b></button><button id="weapon-switch" aria-label="Сменить оружие"><kbd>Q ↔</kbd><span>Ближний бой</span><b>⚔</b></button><button id="horse-control" class="hidden" title="F · В седло / спешиться"><kbd>F</kbd><span>В седло</span><b>♞</b></button><button id="inventory"><kbd>I</kbd><span>Инвентарь</span><b>▣</b></button><button id="crafting" title="Ремесло и умения (C)"><kbd>C</kbd><span>Ремесло</span><b>⚒</b></button><button id="help"><kbd>H</kbd><span>Библиотека</span><b>▤</b></button></div><div class="move-hint">W A S D <span>движение</span> SHIFT <span>бег</span><small id="status">Мир живёт своей жизнью</small></div></div>
-<div id="npc-tooltip" class="hidden"><strong></strong><span></span></div><div id="performance" class="hidden"></div><div id="journey"></div><div id="prompt"></div><div id="toast"></div><div id="modal" class="hidden"><div class="modal-card"><button id="close" class="close" aria-label="Закрыть">×</button><div id="modal-content"></div></div></div>
-<div id="welcome"><div class="welcome-art">✥</div><div class="eyebrow">ПРОЦЕДУРНАЯ RPG · ЖИВОЙ МИР И ПРОФЕССИИ · 0.32 · АЛЬФА 14</div><h1>Пепельный<br><em>тракт</em></h1><p>Дороги помнят ваши шаги.<br>Мир не ждёт вашего возвращения.</p><button id="begin">Начать путешествие <span>→</span></button><button id="begin-campaign" class="action" style="margin-top:10px;min-width:250px;padding:12px">Новый мир с обучающей кампанией</button><small>WASD — идти · R — оружие · ЛКМ — цель / удар · Пробел — атака · M — карта</small><label>Зерно мира <input id="seed" value="734291" maxlength="16"></label><button id="continue" class="text-button hidden">Продолжить сохранённое путешествие</button></div>
-<script type="module" src="game.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Ashen Road — A Living World</title>
+    <link rel="stylesheet" href="./src/ui/game.css" />
+  </head>
+  <body class="main-menu">
+    <canvas id="world"></canvas>
+    <div class="vignette"></div>
+    <header>
+      <div class="location">
+        <span id="zone">Cathedral of the Last Light</span
+        ><small id="zone-sub">SANCTUARY · SOUTHERN LANDS</small>
+      </div>
+      <div class="clock"><span id="time">☀ 08:00</span><small id="day">DAY 1</small></div>
+      <span id="debug-badge" class="hidden">DEBUG</span
+      ><button id="menu" aria-label="Game Menu" title="Menu (Esc)">☰</button
+      ><button id="pause" title="Pause (P)">Ⅱ</button>
+    </header>
+    <aside class="quest-panel">
+      <div class="eyebrow">
+        TRAVEL JOURNAL
+        <button
+          id="quest-toggle"
+          aria-label="Hide quests"
+          aria-expanded="true"
+          aria-controls="quest-body"
+        >
+          −
+        </button>
+      </div>
+      <div id="quest-body">
+        <h2 id="quest-title">Where the Journey Begins</h2>
+        <p id="quest-desc">Speak to Master Sophos in the cathedral’s central hall.</p>
+        <div class="quest-line"><i></i><span id="quest-step">Find Master Sophos</span></div>
+        <button class="text-button" id="journal">Open Journal ↗</button>
+      </div>
+    </aside>
+    <aside class="map-panel">
+      <div class="eyebrow">SOUTHERN LANDS <span>M</span></div>
+      <canvas id="minimap" width="180" height="145"></canvas>
+      <div class="map-legend"><b>◆</b> You <span>● Settlements</span></div>
+    </aside>
+    <section id="feed" aria-live="polite"></section>
+    <div class="bottom">
+      <div class="portrait">♜<span>01</span></div>
+      <div class="vitals">
+        <div class="player-name">WANDERER <small id="coins">24 gold</small></div>
+        <div class="bar health"><i id="hpbar"></i><span id="hp">100 / 100</span></div>
+        <div class="bar stamina"><i id="stbar"></i><span>STAMINA</span></div>
+      </div>
+      <div class="hotkeys">
+        <button id="draw-weapon" aria-pressed="false" title="R · Draw or sheathe your weapon">
+          <kbd>R</kbd><span>Draw weapon</span><b>⚔</b></button
+        ><button id="attack"><kbd>LMB</kbd><span>Attack</span><b>⚔</b></button
+        ><button id="interact"><kbd>E</kbd><span>Interact</span><b>✦</b></button
+        ><button id="weapon-switch" aria-label="Switch Weapon">
+          <kbd>Q ↔</kbd><span>Melee</span><b>⚔</b></button
+        ><button id="horse-control" class="hidden" title="F · Mount / Dismount">
+          <kbd>F</kbd><span>Mount</span><b>♞</b></button
+        ><button id="inventory"><kbd>I</kbd><span>Inventory</span><b>▣</b></button
+        ><button id="crafting" title="Crafting and Skills (C)">
+          <kbd>C</kbd><span>Crafting</span><b>⚒</b></button
+        ><button id="help"><kbd>H</kbd><span>Library</span><b>▤</b></button>
+      </div>
+      <div class="move-hint">
+        W A S D <span>movement</span> SHIFT <span>run</span
+        ><small id="status">The World Lives On</small>
+      </div>
+    </div>
+    <div id="npc-tooltip" class="hidden"><strong></strong><span></span></div>
+    <div id="performance" class="hidden"></div>
+    <div id="journey"></div>
+    <div id="prompt"></div>
+    <div id="toast"></div>
+    <div id="modal" class="hidden">
+      <div class="modal-card">
+        <button id="close" class="close" aria-label="Close">×</button>
+        <div id="modal-content"></div>
+      </div>
+    </div>
+    <div id="welcome">
+      <div class="welcome-art">✥</div>
+      <div class="eyebrow">PROCEDURAL RPG · LIVING WORLD AND PROFESSIONS · 0.32 · ALPHA 14</div>
+      <h1>Ashen<br /><em>Road</em></h1>
+      <p>The roads remember your footsteps.<br />The world does not wait for your return.</p>
+      <button id="begin">Begin Journey <span>→</span></button
+      ><button
+        id="begin-campaign"
+        class="action"
+        style="margin-top: 10px; min-width: 250px; padding: 12px"
+      >
+        New World with Tutorial Campaign</button
+      ><small>WASD — walk · R — weapon · LMB — Target / Attack · Space — Attack · M — map</small
+      ><label>World Seed <input id="seed" value="734291" maxlength="16" /></label
+      ><button id="continue" class="text-button hidden">Continue Saved Journey</button>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

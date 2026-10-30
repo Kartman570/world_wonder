@@ -1,0 +1,64 @@
+import { TILE, point } from '../core/content.js';
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function waitingSpot(w, e, b) {
+  const door = point(b.door.x + 0.5, b.door.y + 2.8);
+  for (let j = 0; j < 30; j++) {
+    const i = (e.id * 7 + j) % 30,
+      p = { x: door.x + ((i % 7) - 3) * 42, y: door.y + Math.floor(i / 7) * 42 };
+    if (
+      !w.blocked(p.x, p.y) &&
+      !w.interiorAt(p) &&
+      w.walkClear(door, p) &&
+      !w.nearby(e, 500).some((o) => o !== e && Math.hypot(o.x - p.x, o.y - p.y) < 30)
+    )
+      return p;
+  }
+  return door;
+}
+export function warehouseApproach(w, e, target, dt, speed = 88) {
+  const b = w.buildings.find((b) => b.city === e.faction && b.type === 'warehouse');
+  if (!b) {
+    w.navigate(e, target, dt, speed);
+    return distance(e, target) < 100;
+  }
+  w.warehouseQueues ??= new Map();
+  let q = w.warehouseQueues.get(b.id);
+  if (!q) {
+    q = { requests: new Map(), holder: null, until: 0 };
+    w.warehouseQueues.set(b.id, q);
+  }
+  for (const [id, req] of q.requests)
+    if (w.elapsed - req.seen > 2 || w.entityById.get(id)?.hp <= 0) q.requests.delete(id);
+  if (q.holder && (!q.requests.has(q.holder) || w.elapsed > q.until)) {
+    const expired = q.requests.get(q.holder);
+    if (expired) expired.at = w.elapsed;
+    q.holder = null;
+  }
+  if (distance(e, target) > 600) {
+    w.navigate(e, target, dt, speed);
+    return false;
+  }
+  if (!q.requests.has(e.id)) q.requests.set(e.id, { at: w.elapsed, seen: w.elapsed });
+  q.requests.get(e.id).seen = w.elapsed;
+  if (!q.holder) {
+    q.holder = [...q.requests].sort((a, b) => a[1].at - b[1].at || a[0] - b[0])[0]?.[0];
+    q.until = w.elapsed + 14;
+  }
+  if (q.holder !== e.id) {
+    e.state = 'waitingWarehouse';
+    e.queueSpot ??= waitingSpot(w, e, b);
+    if (distance(e, e.queueSpot) > 30) w.navigate(e, e.queueSpot, dt, speed);
+    return false;
+  }
+  e.queueSpot = null;
+  if (distance(e, target) <= 155 && w.visibleFrom(e, target) && w.lineClear(e, target)) return true;
+  w.navigate(e, target, dt, speed);
+  return false;
+}
+export function releaseWarehouse(w, e) {
+  for (const q of w.warehouseQueues?.values() || []) {
+    q.requests.delete(e.id);
+    if (q.holder === e.id) q.holder = null;
+  }
+  e.queueSpot = null;
+}
